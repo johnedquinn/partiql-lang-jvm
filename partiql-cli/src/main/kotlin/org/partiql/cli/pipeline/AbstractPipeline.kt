@@ -16,6 +16,7 @@ package org.partiql.cli.pipeline
 
 import com.amazon.ion.IonSystem
 import com.amazon.ion.system.IonSystemBuilder
+import com.amazon.ionelement.api.field
 import com.amazon.ionelement.api.ionInt
 import com.amazon.ionelement.api.ionString
 import com.amazon.ionelement.api.ionStructOf
@@ -46,6 +47,8 @@ import org.partiql.lang.planner.GlobalVariableResolver
 import org.partiql.lang.planner.PartiQLPlannerBuilder
 import org.partiql.lang.syntax.Parser
 import org.partiql.lang.syntax.PartiQLParserBuilder
+import org.partiql.spi.Plugin
+import org.partiql.spi.function.PartiQLFunctionExperimental
 import java.time.ZoneOffset
 
 /**
@@ -82,7 +85,7 @@ internal sealed class AbstractPipeline(open val options: PipelineOptions) {
                 WriteFile_1(ion),
                 WriteFile_2(ion),
                 QueryDDB(ion)
-            ) + ServiceLoaderUtil.loadFunctions()
+            )
             val parser = PartiQLParserBuilder().build()
             return PipelineOptions(
                 pipeline,
@@ -92,7 +95,8 @@ internal sealed class AbstractPipeline(open val options: PipelineOptions) {
                 projectionIteration,
                 undefinedVariable,
                 permissiveMode,
-                functions = functions
+                functions = functions,
+                plugins = ServiceLoaderUtil.loadPlugins()
             )
         }
     }
@@ -105,7 +109,8 @@ internal sealed class AbstractPipeline(open val options: PipelineOptions) {
         val projectionIterationBehavior: ProjectionIterationBehavior = ProjectionIterationBehavior.FILTER_MISSING,
         val undefinedVariableBehavior: UndefinedVariableBehavior = UndefinedVariableBehavior.ERROR,
         val typingMode: TypingMode = TypingMode.LEGACY,
-        val functions: List<ExprFunction> = emptyList()
+        val functions: List<ExprFunction> = emptyList(),
+        val plugins: List<Plugin> = emptyList()
     )
 
     internal enum class PipelineType {
@@ -145,10 +150,33 @@ internal sealed class AbstractPipeline(open val options: PipelineOptions) {
             typingMode(options.typingMode)
         }
 
+        @OptIn(PartiQLFunctionExperimental::class)
         private val compilerPipeline = CompilerPipeline.build {
             options.functions.forEach { function ->
                 addFunction(function)
             }
+            options.plugins.forEach { plugin ->
+                plugin.getFunctions().forEach { pluginFunction ->
+                    val exprFunctions = ServiceLoaderUtil.PartiQLtoExprFunction(pluginFunction)
+                    exprFunctions.forEach { exprFunction ->
+                        addFunction(exprFunction)
+                    }
+                }
+                println("Registering plugin: $plugin")
+                addPlugin(plugin)
+            }
+            addCatalogEntry(
+                "iondb" to ionStructOf(
+                    field(org.partiql.spi.connector.Constants.CONFIG_KEY_CONNECTOR_NAME, ionString("ion-db")),
+                    field("ion-db-root", ionString("/Users/johqunn/.partiql/ion"))
+                )
+            )
+            addCatalogEntry(
+                "andes" to ionStructOf(
+                    field(org.partiql.spi.connector.Constants.CONFIG_KEY_CONNECTOR_NAME, ionString("localdb")),
+                    field("localdb_root", ionString("/Users/johqunn/.partiql/ion"))
+                )
+            )
             compileOptions(compileOptions)
             sqlParser(options.parser)
         }

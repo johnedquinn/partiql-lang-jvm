@@ -16,6 +16,7 @@ package org.partiql.lang
 
 import com.amazon.ion.IonSystem
 import com.amazon.ion.system.IonSystemBuilder
+import com.amazon.ionelement.api.StructElement
 import org.partiql.lang.domains.PartiqlAst
 import org.partiql.lang.eval.Bindings
 import org.partiql.lang.eval.CompileOptions
@@ -29,10 +30,12 @@ import org.partiql.lang.eval.builtins.storedprocedure.StoredProcedure
 import org.partiql.lang.eval.visitors.PipelinedVisitorTransform
 import org.partiql.lang.eval.visitors.StaticTypeInferenceVisitorTransform
 import org.partiql.lang.eval.visitors.StaticTypeVisitorTransform
+import org.partiql.lang.planner.transforms.impl.Metadata
 import org.partiql.lang.syntax.Parser
 import org.partiql.lang.syntax.PartiQLParserBuilder
 import org.partiql.lang.types.CustomType
 import org.partiql.lang.util.interruptibleFold
+import org.partiql.spi.Plugin
 import org.partiql.types.StaticType
 
 /**
@@ -134,6 +137,8 @@ interface CompilerPipeline {
         private val customProcedures: MutableMap<String, StoredProcedure> = HashMap()
         private val preProcessingSteps: MutableList<ProcessingStep> = ArrayList()
         private var globalTypeBindings: Bindings<StaticType>? = null
+        private var plugins: MutableList<Plugin> = mutableListOf()
+        private val catalogMap: MutableMap<String, StructElement> = HashMap()
 
         /**
          * Specifies the [Parser] to be used to turn an PartiQL query into an instance of [PartiqlAst].
@@ -162,6 +167,26 @@ interface CompilerPipeline {
          * Functions added here will replace any built-in function with the same name.
          */
         fun addFunction(function: ExprFunction): Builder = this.apply { customFunctions.add(function) }
+
+        /**
+         * TODO: Add documentation
+         */
+        fun addPlugin(plugin: Plugin): Builder = this.apply { this.plugins.add(plugin) }
+
+        /**
+         * TODO: Add documentation
+         */
+        fun addPlugins(plugins: List<Plugin>): Builder = this.apply { this.plugins.addAll(plugins) }
+
+        /**
+         * TODO: Add documentation
+         */
+        fun addCatalogEntry(entry: Pair<String, StructElement>): Builder = this.apply { this.catalogMap[entry.first] = entry.second }
+
+        /**
+         * TODO: Add documentation
+         */
+        fun addCatalogEntries(entries: Map<String, StructElement>): Builder = this.apply { this.catalogMap.putAll(entries)}
 
         /**
          * Add custom types to CAST/IS operators to.
@@ -213,7 +238,9 @@ interface CompilerPipeline {
                 customDataTypes = customDataTypes,
                 procedures = customProcedures,
                 preProcessingSteps = preProcessingSteps,
-                globalTypeBindings = globalTypeBindings
+                globalTypeBindings = globalTypeBindings,
+                plugins = plugins,
+                catalogMap = catalogMap
             )
         }
     }
@@ -227,7 +254,9 @@ internal class CompilerPipelineImpl(
     override val customDataTypes: List<CustomType>,
     override val procedures: Map<String, StoredProcedure>,
     private val preProcessingSteps: List<ProcessingStep>,
-    override val globalTypeBindings: Bindings<StaticType>?
+    override val globalTypeBindings: Bindings<StaticType>?,
+    val plugins: List<Plugin>,
+    val catalogMap: Map<String, StructElement>
 ) : CompilerPipeline {
 
     private val compiler = EvaluatingCompiler(
@@ -238,7 +267,8 @@ internal class CompilerPipelineImpl(
             }
         }.flatten().toMap(),
         procedures,
-        compileOptions
+        compileOptions,
+        metadata = Metadata(plugins, catalogMap)
     )
 
     override fun compile(query: String): Expression = compile(parser.parseAstStatement(query))

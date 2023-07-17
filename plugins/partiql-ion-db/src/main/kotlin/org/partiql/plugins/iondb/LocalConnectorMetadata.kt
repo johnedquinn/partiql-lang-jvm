@@ -12,7 +12,7 @@
  *  language governing permissions and limitations under the License.
  */
 
-package org.partiql.plugins.mockdb
+package org.partiql.plugins.iondb
 
 import org.partiql.spi.BindingName
 import org.partiql.spi.BindingPath
@@ -23,10 +23,10 @@ import org.partiql.spi.connector.ConnectorSession
 import org.partiql.types.StaticType
 import org.partiql.value.PartiQLValue
 import org.partiql.value.PartiQLValueExperimental
-import org.partiql.value.intValue
-import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.extension
+import kotlin.io.path.nameWithoutExtension
 import kotlin.streams.toList
 
 /**
@@ -36,8 +36,8 @@ import kotlin.streams.toList
 class LocalConnectorMetadata(val name: String, private val root: Path) : ConnectorMetadata {
 
     override fun getObjectType(session: ConnectorSession, handle: ConnectorObjectHandle): StaticType {
-        val jsonHandle = handle.value as LocalConnectorObject
-        return jsonHandle.getDescriptor()
+        val ionHandle = handle.value as LocalConnectorObject
+        return ionHandle.getDescriptor()
     }
 
     override fun getObjectHandle(
@@ -47,14 +47,15 @@ class LocalConnectorMetadata(val name: String, private val root: Path) : Connect
         val resolvedObject = resolveObject(root, path.steps) ?: return null
         return ConnectorObjectHandle(
             absolutePath = ConnectorObjectPath(resolvedObject.names),
-            value = LocalConnectorObject(resolvedObject.json)
+            value = LocalConnectorObject(resolvedObject.path)
         )
     }
 
     // TODO: COW Hack
     @OptIn(PartiQLValueExperimental::class)
     override fun getValue(session: ConnectorSession, handle: ConnectorObjectHandle): PartiQLValue {
-        return intValue(BigInteger.ONE)
+        val ionHandle = handle.value as LocalConnectorObject
+        return ionHandle.getValue()
     }
 
     //
@@ -65,7 +66,7 @@ class LocalConnectorMetadata(val name: String, private val root: Path) : Connect
 
     private class NamespaceMetadata(
         val names: List<String>,
-        val json: String
+        val path: Path
     )
 
     private fun resolveObject(root: Path, names: List<BindingName>): NamespaceMetadata? {
@@ -82,13 +83,16 @@ class LocalConnectorMetadata(val name: String, private val root: Path) : Connect
         val tablePaths = Files.list(current).toList()
         var filename = ""
         val tableDef = tablePaths.firstOrNull { file ->
-            filename = file.getName(file.nameCount - 1).toString().removeSuffix(".json")
+            println("Looking at $file with extension: ${file.extension.lowercase()}. Looking for table $table")
+            if (file.extension.lowercase() != "ion" && file.extension.lowercase() != "10n") {
+                return@firstOrNull false
+            }
+            filename = file.getName(file.nameCount - 1).nameWithoutExtension
             table.isEquivalentTo(filename)
         } ?: return null
-        val tableDefString = String(Files.readAllBytes(tableDef))
         return NamespaceMetadata(
             names = fileNames + listOf(filename),
-            json = tableDefString
+            path = tableDef
         )
     }
 

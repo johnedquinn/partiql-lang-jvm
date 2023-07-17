@@ -22,6 +22,7 @@ include(
     "partiql-plan",
     "partiql-spi",
     "partiql-types",
+    "plugins:partiql-ion-db",
     "plugins:partiql-mockdb",
     "lib:isl",
     "lib:sprout",

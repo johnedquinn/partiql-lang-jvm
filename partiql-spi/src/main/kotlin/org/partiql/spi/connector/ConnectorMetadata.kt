@@ -16,6 +16,8 @@ package org.partiql.spi.connector
 
 import org.partiql.spi.BindingPath
 import org.partiql.types.StaticType
+import org.partiql.value.PartiQLValue
+import org.partiql.value.PartiQLValueExperimental
 
 /**
  * Aids in retrieving relevant Catalog metadata for the purpose of planning and execution.
@@ -43,4 +45,8 @@ public interface ConnectorMetadata {
      * If the [path] does not correspond to an existing [ConnectorObject], implementers should return null.
      */
     public fun getObjectHandle(session: ConnectorSession, path: BindingPath): ConnectorObjectHandle?
+
+    // TODO: COW Hack
+    @OptIn(PartiQLValueExperimental::class)
+    public fun getValue(session: ConnectorSession, handle: ConnectorObjectHandle): PartiQLValue
 }

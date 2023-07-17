@@ -298,6 +298,8 @@ internal class Shell(
             EvaluationSession.build {
                 globals(bindings)
                 user(currentUser)
+                catalog("iondb")
+                schema("hello")
             }
         )
 
@@ -318,6 +320,7 @@ internal class Shell(
         } catch (ex: SqlException) {
             out.error(ex.generateMessage())
             out.error(ex.message)
+            ex.printStackTrace()
             null // signals that there was an error
         } catch (ex: NotImplementedError) {
             out.error(ex.message ?: "kotlin.NotImplementedError was raised")

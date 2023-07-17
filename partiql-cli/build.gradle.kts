@@ -33,7 +33,8 @@ dependencies {
     implementation(Deps.picoCli)
     implementation(Deps.kotlinReflect)
     testImplementation(Deps.mockito)
-    testImplementation(project(":plugins:partiql-mockdb"))
+    implementation(project(":plugins:partiql-mockdb"))
+    implementation(project(":plugins:partiql-ion-db"))
 }
 
 application {

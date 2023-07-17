@@ -1,6 +1,7 @@
-package org.partiql.plugins.mockdb
+package org.partiql.plugins.iondb
 
 import org.junit.jupiter.api.Test
+import org.partiql.plugins.mockdb.LocalConnectorMetadata
 import org.partiql.spi.BindingCase
 import org.partiql.spi.BindingName
 import org.partiql.spi.BindingPath

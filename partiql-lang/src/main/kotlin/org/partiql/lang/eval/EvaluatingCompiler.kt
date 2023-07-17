@@ -36,7 +36,6 @@ import org.partiql.lang.domains.toBindingCase
 import org.partiql.lang.errors.ErrorCode
 import org.partiql.lang.errors.Property
 import org.partiql.lang.errors.PropertyValueMap
-import org.partiql.lang.errors.UNBOUND_QUOTED_IDENTIFIER_HINT
 import org.partiql.lang.eval.binding.Alias
 import org.partiql.lang.eval.binding.localsBinder
 import org.partiql.lang.eval.builtins.storedprocedure.StoredProcedure
@@ -51,6 +50,7 @@ import org.partiql.lang.graph.GraphEngine
 import org.partiql.lang.graph.NodeSpec
 import org.partiql.lang.graph.Stride
 import org.partiql.lang.graph.StrideSpec
+import org.partiql.lang.planner.transforms.impl.Metadata
 import org.partiql.lang.types.StaticTypeUtils.getRuntimeType
 import org.partiql.lang.types.StaticTypeUtils.isInstance
 import org.partiql.lang.types.StaticTypeUtils.staticTypeFromExprValue
@@ -75,6 +75,8 @@ import org.partiql.lang.util.times
 import org.partiql.lang.util.totalMinutes
 import org.partiql.lang.util.unaryMinus
 import org.partiql.pig.runtime.SymbolPrimitive
+import org.partiql.spi.BindingPath
+import org.partiql.spi.connector.ConnectorSession
 import org.partiql.types.AnyOfType
 import org.partiql.types.AnyType
 import org.partiql.types.IntType
@@ -130,8 +132,10 @@ internal class EvaluatingCompiler(
     private val functions: List<ExprFunction>,
     private val customTypedOpParameters: Map<String, TypedOpParameter>,
     private val procedures: Map<String, StoredProcedure>,
-    private val compileOptions: CompileOptions = CompileOptions.standard()
+    private val compileOptions: CompileOptions = CompileOptions.standard(),
+    private val metadata: Metadata = Metadata(emptyList(), emptyMap())
 ) {
+
     // TODO: remove this once we migrate from `IonValue` to `IonElement`.
     private val ion = IonSystemBuilder.standard().build()
 
@@ -1041,77 +1045,36 @@ internal class EvaluatingCompiler(
     private fun compileMissing(metas: MetaContainer): ThunkEnv =
         thunkFactory.thunkEnv(metas) { ExprValue.missingValue }
 
+    private fun EvaluationSession.toConnectorSession(): ConnectorSession {
+        return object : ConnectorSession {
+            override fun getQueryId(): String = "XXX" // TODO
+            override fun getUserId(): String = "CURRENT_USER" // TODO
+        }
+    }
+
     private fun compileId(expr: PartiqlAst.Expr.Id, metas: MetaContainer): ThunkEnv {
-        val uniqueNameMeta = metas[UniqueNameMeta.TAG] as? UniqueNameMeta
-        val fromSourceNames = currentCompilationContext.fromSourceNames
-
-        return when (uniqueNameMeta) {
-            null -> {
-                val bindingName = BindingName(expr.name.text, expr.case.toBindingCase())
-                val evalVariableReference = when (compileOptions.undefinedVariable) {
-                    UndefinedVariableBehavior.ERROR ->
-                        thunkFactory.thunkEnv(metas) { env ->
-                            when (val value = env.current[bindingName]) {
-                                null -> {
-                                    if (fromSourceNames.any { bindingName.isEquivalentTo(it) }) {
-                                        err(
-                                            "Variable not in GROUP BY or aggregation function: ${bindingName.name}",
-                                            ErrorCode.EVALUATOR_VARIABLE_NOT_INCLUDED_IN_GROUP_BY,
-                                            errorContextFrom(metas).also {
-                                                it[Property.BINDING_NAME] = bindingName.name
-                                            },
-                                            internal = false
-                                        )
-                                    } else {
-                                        val (errorCode, hint) = when (expr.case) {
-                                            is PartiqlAst.CaseSensitivity.CaseSensitive ->
-                                                Pair(
-                                                    ErrorCode.EVALUATOR_QUOTED_BINDING_DOES_NOT_EXIST,
-                                                    " $UNBOUND_QUOTED_IDENTIFIER_HINT"
-                                                )
-                                            is PartiqlAst.CaseSensitivity.CaseInsensitive ->
-                                                Pair(ErrorCode.EVALUATOR_BINDING_DOES_NOT_EXIST, "")
-                                        }
-                                        err(
-                                            "No such binding: ${bindingName.name}.$hint",
-                                            errorCode,
-                                            errorContextFrom(metas).also {
-                                                it[Property.BINDING_NAME] = bindingName.name
-                                            },
-                                            internal = false
-                                        )
-                                    }
-                                }
-                                else -> value
-                            }
-                        }
-                    UndefinedVariableBehavior.MISSING ->
-                        thunkFactory.thunkEnv(metas) { env ->
-                            env.current[bindingName] ?: ExprValue.missingValue
-                        }
-                }
-
-                when (expr.qualifier) {
-                    is PartiqlAst.ScopeQualifier.Unqualified -> evalVariableReference
-                    is PartiqlAst.ScopeQualifier.LocalsFirst -> thunkFactory.thunkEnv(metas) { env ->
-                        evalVariableReference(env.flipToLocals())
-                    }
-                }
+        return thunkFactory.thunkEnv(metas) { env ->
+            val bindingName = BindingName(expr.name.text, expr.case.toBindingCase())
+            val value = env.current[bindingName]
+            if (value != null) {
+                return@thunkEnv value
             }
-            else -> {
-                val bindingName = BindingName(uniqueNameMeta.uniqueName, BindingCase.SENSITIVE)
-
-                thunkFactory.thunkEnv(metas) { env ->
-                    // Unique identifiers are generated by the compiler and should always resolve.  If they
-                    // don't for some reason we have a bug.
-                    env.current[bindingName] ?: err(
-                        "Uniquely named binding \"${bindingName.name}\" does not exist for some reason",
-                        ErrorCode.INTERNAL_ERROR,
-                        errorContextFrom(metas),
-                        internal = true
-                    )
-                }
-            }
+            val session = env.session.toConnectorSession()
+            val currentCatalog = env.session.currentCatalog ?: "NO_CATALOG_FOUND"
+            val currentSchema = env.session.currentSchema?.let {
+                org.partiql.spi.BindingName(it, org.partiql.spi.BindingCase.SENSITIVE)
+            } ?: org.partiql.spi.BindingName("NO_SCHEMA_FOUND", org.partiql.spi.BindingCase.SENSITIVE)
+            println("Looking for ${expr.name.text} in catalog $currentCatalog and schema: ${currentSchema.name}")
+            metadata.getObjectHandle(
+                session,
+                org.partiql.spi.BindingName(currentCatalog, org.partiql.spi.BindingCase.SENSITIVE),
+                BindingPath(
+                    listOf(currentSchema,
+                    org.partiql.spi.BindingName(expr.name.text, org.partiql.spi.BindingCase.SENSITIVE))
+                )
+            )?.let { handle ->
+                metadata.getValue(session, handle)
+            } ?: error("Couldn't find global variable.")
         }
     }
 

@@ -31,7 +31,9 @@ class EvaluationSession private constructor(
     val globals: Bindings<ExprValue>,
     val parameters: List<ExprValue>,
     val context: Map<String, Any>,
-    val now: Timestamp
+    val now: Timestamp,
+    var currentCatalog: String? = null,
+    var currentSchema: String? = null
 ) {
 
     companion object {
@@ -85,6 +87,16 @@ class EvaluationSession private constructor(
             return this
         }
 
+        private var catalog: String? = null
+        fun catalog(value: String): Builder = this.apply {
+            this.catalog = value
+        }
+
+        private var schema: String? = null
+        fun schema(value: String): Builder = this.apply {
+            this.schema = value
+        }
+
         private val contextVariables = HashMap<String, Any>()
         fun withContextVariable(name: String, value: Any): Builder {
             contextVariables[name] = value
@@ -95,7 +107,9 @@ class EvaluationSession private constructor(
             now = now ?: Timestamp.nowZ(),
             parameters = parameters,
             context = contextVariables,
-            globals = globals
+            globals = globals,
+            currentCatalog = catalog,
+            currentSchema = schema
         )
     }
 }
