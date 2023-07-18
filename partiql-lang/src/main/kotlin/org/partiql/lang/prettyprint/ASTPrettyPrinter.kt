@@ -52,6 +52,11 @@ class ASTPrettyPrinter {
             is PartiqlAst.Statement.Ddl -> toRecursionTree(ast)
             is PartiqlAst.Statement.Exec -> toRecursionTree(ast)
             is PartiqlAst.Statement.Explain -> toRecursionTree(ast)
+            is PartiqlAst.Statement.SetCatalog -> TODO()
+            is PartiqlAst.Statement.SetSchema -> TODO()
+            is PartiqlAst.Statement.ShowSchemas -> TODO()
+            is PartiqlAst.Statement.ShowTables -> TODO()
+            is PartiqlAst.Statement.ShowValues -> TODO()
         }
 
         return recursionTree.convertToString()
@@ -81,6 +86,11 @@ class ASTPrettyPrinter {
         is PartiqlAst.Statement.Ddl -> toRecursionTree(stmt)
         is PartiqlAst.Statement.Exec -> toRecursionTree(stmt)
         is PartiqlAst.Statement.Explain -> toRecursionTree(stmt)
+        is PartiqlAst.Statement.SetCatalog -> TODO()
+        is PartiqlAst.Statement.SetSchema -> TODO()
+        is PartiqlAst.Statement.ShowSchemas -> TODO()
+        is PartiqlAst.Statement.ShowTables -> TODO()
+        is PartiqlAst.Statement.ShowValues -> TODO()
     }
 
     // *******
@@ -125,6 +135,7 @@ class ASTPrettyPrinter {
                     toRecursionTree(node.tableName, "tableName")
                 )
             )
+            is PartiqlAst.DdlOp.CreateValue -> TODO()
         }
 
     private fun toRecursionTree(node: PartiqlAst.Identifier, attrOfParent: String? = null): RecursionTree =

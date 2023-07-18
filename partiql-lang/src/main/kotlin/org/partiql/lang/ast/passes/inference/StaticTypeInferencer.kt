@@ -52,6 +52,11 @@ class StaticTypeInferencer(
             is PartiqlAst.Statement.Ddl,
             is PartiqlAst.Statement.Explain,
             is PartiqlAst.Statement.Exec -> error("Type inference for DML, DDL, EXEC, and EXPLAIN statements is not currently supported")
+            is PartiqlAst.Statement.SetCatalog -> TODO()
+            is PartiqlAst.Statement.SetSchema -> TODO()
+            is PartiqlAst.Statement.ShowSchemas -> TODO()
+            is PartiqlAst.Statement.ShowTables -> TODO()
+            is PartiqlAst.Statement.ShowValues -> TODO()
         }
         return when {
             problemCollector.hasErrors -> InferenceResult.Failure(inferredStaticType, transformedPartiqlAst, problemCollector.problems)

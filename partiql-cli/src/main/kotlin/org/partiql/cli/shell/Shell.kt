@@ -109,6 +109,12 @@ internal class Shell(
     private var previousResult = ExprValue.nullValue
     private val out = PrintStream(output)
     private val currentUser = System.getProperty("user.name")
+    
+    val session = EvaluationSession.build {
+        user(currentUser)
+        catalog("iondb")
+        schema("hello")
+    }
 
     fun start() {
         val exiting = AtomicBoolean()
@@ -200,8 +206,7 @@ internal class Shell(
                     // https://github.com/partiql/partiql-lang-kotlin/issues/63
                     val arg = requireInput(line, command) ?: continue
                     executeAndPrint {
-                        val locals = refreshBindings()
-                        val result = evaluatePartiQL(arg, locals) as PartiQLResult.Value
+                        val result = evaluatePartiQL(arg) as PartiQLResult.Value
                         globals.add(result.value.bindings)
                         result
                     }
@@ -243,8 +248,7 @@ internal class Shell(
 
             // Execute PartiQL
             executeAndPrint {
-                val locals = refreshBindings()
-                evaluatePartiQL(line, locals)
+                evaluatePartiQL(line)
             }
         }
     }
@@ -282,25 +286,11 @@ internal class Shell(
             null
         }
 
-    /** Prepare bindings to use for the next evaluation. */
-    private fun refreshBindings(): Bindings<ExprValue> {
-        return Bindings.buildLazyBindings<ExprValue> {
-            addBinding("_") {
-                previousResult
-            }
-        }.delegate(globals.bindings)
-    }
-
-    /** Evaluate a textual PartiQL query [textPartiQL] in the context of given [bindings]. */
-    private fun evaluatePartiQL(textPartiQL: String, bindings: Bindings<ExprValue>): PartiQLResult =
+    /** Evaluate a textual PartiQL query [textPartiQL]. */
+    private fun evaluatePartiQL(textPartiQL: String): PartiQLResult =
         compiler.compile(
             textPartiQL,
-            EvaluationSession.build {
-                globals(bindings)
-                user(currentUser)
-                catalog("iondb")
-                schema("hello")
-            }
+            session
         )
 
     private fun bringGraph(name: String, graphIonText: String) {

@@ -41,6 +41,17 @@ may then be further optimized by selecting better implementations of each operat
             // any expression that can be used in a context that requires a result.
             (query expr::expr)
 
+            // SET CATALOG <catalog name>
+            (set_catalog catalog::symbol)
+
+            // SET SCHEMA <schema name>
+            (set_schema schema::symbol)
+
+            // SHOW SCHEMAS
+            (show_schemas)
+            (show_tables)
+            (show_values)
+
             // Data manipulation operations cannot be composed with other `expr` nodes, although they may
             // contain `expr` nodes themselves.
             // TODO:  The `dml` variant and `dml_op` sum type closely mirrors the historical `V0` AST. The disadvantage
@@ -435,6 +446,9 @@ may then be further optimized by selecting better implementations of each operat
         (sum ddl_op
             // `CREATE TABLE <symbol> ( <table_def> )?`
             (create_table table_name::symbol def::(? table_def))
+
+            // CREATE VALUE <symbol> AS <value>
+            (create_value table_name::symbol def::expr)
 
             // `DROP TABLE <identifier>`
             (drop_table table_name::identifier)

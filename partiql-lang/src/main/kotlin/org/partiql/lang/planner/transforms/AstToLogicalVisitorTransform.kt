@@ -500,6 +500,7 @@ internal class AstToLogicalVisitorTransform(
                         is PartiqlAst.DdlOp.CreateTable -> "CREATE TABLE"
                         is PartiqlAst.DdlOp.DropIndex -> "DROP INDEX"
                         is PartiqlAst.DdlOp.DropTable -> "DROP TABLE"
+                        is PartiqlAst.DdlOp.CreateValue -> TODO()
                     }
                 )
             )

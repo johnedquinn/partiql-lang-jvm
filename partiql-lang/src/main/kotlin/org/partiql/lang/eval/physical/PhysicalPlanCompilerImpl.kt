@@ -25,6 +25,7 @@ import org.partiql.lang.ast.IsOrderedMeta
 import org.partiql.lang.ast.SourceLocationMeta
 import org.partiql.lang.ast.UNKNOWN_SOURCE_LOCATION
 import org.partiql.lang.ast.sourceLocation
+import org.partiql.lang.domains.PartiqlAst
 import org.partiql.lang.domains.PartiqlPhysical
 import org.partiql.lang.domains.staticType
 import org.partiql.lang.domains.toBindingCase
@@ -207,6 +208,11 @@ internal class PhysicalPlanCompilerImpl(
                 val value = ExprValue.newBoolean(true)
                 thunkFactory.thunkEnv(emptyMetaContainer()) { value }
             }
+            is PartiqlPhysical.Statement.SetCatalog -> TODO()
+            is PartiqlPhysical.Statement.SetSchema -> TODO()
+            is PartiqlPhysical.Statement.ShowSchemas -> TODO()
+            is PartiqlPhysical.Statement.ShowTables -> TODO()
+            is PartiqlPhysical.Statement.ShowValues -> TODO()
         }
     }
 

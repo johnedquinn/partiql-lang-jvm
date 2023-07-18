@@ -57,6 +57,27 @@ class LocalConnectorMetadata(val name: String, private val root: Path) : Connect
         return intValue(BigInteger.ONE)
     }
 
+    @OptIn(PartiQLValueExperimental::class)
+    override fun createValue(session: ConnectorSession, path: BindingPath, value: PartiQLValue) {
+        TODO("Not yet implemented")
+    }
+
+    override fun createTable(session: ConnectorSession, path: BindingPath, schema: StaticType) {
+        TODO("Not yet implemented")
+    }
+
+    override fun listSchemas(session: ConnectorSession): List<String> {
+        TODO("Not yet implemented")
+    }
+
+    override fun listTables(session: ConnectorSession, schema: BindingPath): List<String> {
+        TODO("Not yet implemented")
+    }
+
+    override fun listValues(session: ConnectorSession, schema: BindingPath): List<String> {
+        TODO("Not yet implemented")
+    }
+
     //
     //
     // HELPER METHODS

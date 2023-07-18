@@ -80,9 +80,36 @@ import org.partiql.spi.connector.ConnectorSession
 import org.partiql.types.AnyOfType
 import org.partiql.types.AnyType
 import org.partiql.types.IntType
+import org.partiql.types.PartiQLValueType
 import org.partiql.types.SingleType
 import org.partiql.types.StaticType
 import org.partiql.types.UnsupportedTypeCheckException
+import org.partiql.value.PartiQLValue
+import org.partiql.value.PartiQLValueExperimental
+import org.partiql.value.bagValue
+import org.partiql.value.blobValue
+import org.partiql.value.boolValue
+import org.partiql.value.charValue
+import org.partiql.value.clobValue
+import org.partiql.value.dateValue
+import org.partiql.value.decimalValue
+import org.partiql.value.float32Value
+import org.partiql.value.float64Value
+import org.partiql.value.int16Value
+import org.partiql.value.int32Value
+import org.partiql.value.int64Value
+import org.partiql.value.int8Value
+import org.partiql.value.intValue
+import org.partiql.value.listValue
+import org.partiql.value.missingValue
+import org.partiql.value.nullValue
+import org.partiql.value.sexpValue
+import org.partiql.value.stringValue
+import org.partiql.value.structValue
+import org.partiql.value.symbolValue
+import org.partiql.value.timeValue
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.LinkedList
 import java.util.Stack
 import java.util.TreeSet
@@ -395,6 +422,77 @@ internal class EvaluatingCompiler(
                 ErrorCode.UNIMPLEMENTED_FEATURE,
                 internal = false
             )
+            is PartiqlAst.Statement.SetCatalog -> compileSetCatalog(ast, ast.metas)
+            is PartiqlAst.Statement.SetSchema -> compileSetSchema(ast, ast.metas)
+            is PartiqlAst.Statement.ShowSchemas -> compileShowSchemas(ast, ast.metas)
+            is PartiqlAst.Statement.ShowTables -> compileShowTables(ast, ast.metas)
+            is PartiqlAst.Statement.ShowValues -> compileShowValues(ast, ast.metas)
+        }
+    }
+
+    private fun compileSetCatalog(node: PartiqlAst.Statement.SetCatalog, metas: MetaContainer): ThunkEnv {
+        val name = node.catalog.text
+        return thunkFactory.thunkEnv(metas) { env ->
+            if (metadata.catalogExists(env.session.toConnectorSession(), org.partiql.spi.BindingName(node.catalog.text, org.partiql.spi.BindingCase.SENSITIVE))) {
+                env.session.currentCatalog = name
+                env.session.currentSchema = null
+                ExprValue.newBoolean(true)
+            } else {
+                error("Catalog $name doesn't exist!")
+            }
+        }
+    }
+    
+    private fun compileSetSchema(node: PartiqlAst.Statement.SetSchema, metas: MetaContainer): ThunkEnv {
+        val name = node.schema.text
+        return thunkFactory.thunkEnv(metas) { env ->
+            env.session.currentSchema = name
+            ExprValue.newBoolean(true)
+        }
+    }
+
+    private fun compileShowSchemas(node: PartiqlAst.Statement.ShowSchemas, metas: MetaContainer): ThunkEnv {
+        return thunkFactory.thunkEnv(metas) { env ->
+            val currentCatalog = env.session.currentCatalog ?: return@thunkEnv ExprValue.newList(emptyList())
+            val schemas = metadata.listSchemas(
+                env.session.toConnectorSession(),
+                org.partiql.spi.BindingName(currentCatalog, org.partiql.spi.BindingCase.SENSITIVE)
+            ).map {
+                ExprValue.newString(it)
+            }
+            ExprValue.newList(schemas)
+        }
+    }
+
+    private fun compileShowTables(node: PartiqlAst.Statement.ShowTables, metas: MetaContainer): ThunkEnv {
+        return thunkFactory.thunkEnv(metas) { env ->
+            val currentCatalog = env.session.currentCatalog ?: return@thunkEnv ExprValue.newList(emptyList())
+            val currentSchema = env.session.currentSchema?.let { org.partiql.spi.BindingName(it, org.partiql.spi.BindingCase.SENSITIVE) }
+            val path = listOfNotNull(currentSchema)
+            val schemas = metadata.listTables(
+                env.session.toConnectorSession(),
+                org.partiql.spi.BindingName(currentCatalog, org.partiql.spi.BindingCase.SENSITIVE),
+                BindingPath(path)
+            ).map {
+                ExprValue.newString(it)
+            }
+            ExprValue.newList(schemas)
+        }
+    }
+
+    private fun compileShowValues(node: PartiqlAst.Statement.ShowValues, metas: MetaContainer): ThunkEnv {
+        return thunkFactory.thunkEnv(metas) { env ->
+            val currentCatalog = env.session.currentCatalog ?: return@thunkEnv ExprValue.newList(emptyList())
+            val currentSchema = env.session.currentSchema?.let { org.partiql.spi.BindingName(it, org.partiql.spi.BindingCase.SENSITIVE) }
+            val path = listOfNotNull(currentSchema)
+            val schemas = metadata.listValues(
+                env.session.toConnectorSession(),
+                org.partiql.spi.BindingName(currentCatalog, org.partiql.spi.BindingCase.SENSITIVE),
+                BindingPath(path)
+            ).map {
+                ExprValue.newString(it)
+            }
+            ExprValue.newList(schemas)
         }
     }
 
@@ -1052,6 +1150,8 @@ internal class EvaluatingCompiler(
         }
     }
 
+    // TODO: COW Hack
+    // TODO: This allows for variables directly in the Catalog
     private fun compileId(expr: PartiqlAst.Expr.Id, metas: MetaContainer): ThunkEnv {
         return thunkFactory.thunkEnv(metas) { env ->
             val bindingName = BindingName(expr.name.text, expr.case.toBindingCase())
@@ -1060,21 +1160,22 @@ internal class EvaluatingCompiler(
                 return@thunkEnv value
             }
             val session = env.session.toConnectorSession()
-            val currentCatalog = env.session.currentCatalog ?: "NO_CATALOG_FOUND"
+            val currentCatalog = env.session.currentCatalog ?: error("Couldn't find global variable without being in a Catalog.")
             val currentSchema = env.session.currentSchema?.let {
                 org.partiql.spi.BindingName(it, org.partiql.spi.BindingCase.SENSITIVE)
-            } ?: org.partiql.spi.BindingName("NO_SCHEMA_FOUND", org.partiql.spi.BindingCase.SENSITIVE)
-            println("Looking for ${expr.name.text} in catalog $currentCatalog and schema: ${currentSchema.name}")
+            }
             metadata.getObjectHandle(
                 session,
                 org.partiql.spi.BindingName(currentCatalog, org.partiql.spi.BindingCase.SENSITIVE),
                 BindingPath(
-                    listOf(currentSchema,
-                    org.partiql.spi.BindingName(expr.name.text, org.partiql.spi.BindingCase.SENSITIVE))
+                    listOfNotNull(
+                        currentSchema,
+                        org.partiql.spi.BindingName(expr.name.text, org.partiql.spi.BindingCase.SENSITIVE)
+                    )
                 )
             )?.let { handle ->
                 metadata.getValue(session, handle)
-            } ?: error("Couldn't find global variable.")
+            } ?: error("Couldn't find global variable in current Catalog/Schema.")
         }
     }
 
@@ -2861,17 +2962,382 @@ internal class EvaluatingCompiler(
         return escape
     }
 
-    private fun compileDdl(node: PartiqlAst.Statement.Ddl): ThunkEnv =
-        { _ ->
-            err(
-                "DDL operations are not supported yet",
-                ErrorCode.EVALUATOR_FEATURE_NOT_SUPPORTED_YET,
-                errorContextFrom(node.metas).also {
-                    it[Property.FEATURE_NAME] = "DDL Operations"
-                },
-                internal = false
+    private fun compileDdl(node: PartiqlAst.Statement.Ddl): ThunkEnv = when (val op = node.op) {
+        is PartiqlAst.DdlOp.CreateTable -> compileCreateTable(op, op.metas)
+        is PartiqlAst.DdlOp.CreateValue -> compileCreateValue(op, op.metas)
+        is PartiqlAst.DdlOp.CreateIndex -> TODO()
+        is PartiqlAst.DdlOp.DropIndex -> TODO()
+        is PartiqlAst.DdlOp.DropTable -> TODO()
+    }
+    
+    @OptIn(PartiQLValueExperimental::class)
+    private fun compileCreateTable(node: PartiqlAst.DdlOp.CreateTable, metas: MetaContainer): ThunkEnv {
+        val name = node.tableName.text
+        return thunkFactory.thunkEnv(metas) { env ->
+            val session = env.session.toConnectorSession()
+            val currentCatalog = env.session.currentCatalog ?: "NO_CATALOG_FOUND"
+            val currentSchema = env.session.currentSchema?.let {
+                org.partiql.spi.BindingName(it, org.partiql.spi.BindingCase.SENSITIVE)
+            } ?: org.partiql.spi.BindingName("NO_SCHEMA_FOUND", org.partiql.spi.BindingCase.SENSITIVE)
+            metadata.createValue(
+                session,
+                org.partiql.spi.BindingName(currentCatalog, org.partiql.spi.BindingCase.SENSITIVE),
+                BindingPath(
+                    listOf(
+                        currentSchema,
+                        org.partiql.spi.BindingName(name, org.partiql.spi.BindingCase.SENSITIVE)
+                    )
+                ),
+                nullValue()
             )
+            ExprValue.newBoolean(true)
         }
+    }
+
+    // TODO: Add support for anything more than INT
+    @OptIn(PartiQLValueExperimental::class)
+    private fun compileCreateValue(node: PartiqlAst.DdlOp.CreateValue, metas: MetaContainer): ThunkEnv {
+        val name = node.tableName.text
+        val value = compileAstExpr(node.def)
+        return thunkFactory.thunkEnv(metas) { env ->
+            val session = env.session.toConnectorSession()
+            val currentCatalog = env.session.currentCatalog ?: "NO_CATALOG_FOUND"
+            val currentSchema = env.session.currentSchema?.let {
+                org.partiql.spi.BindingName(it, org.partiql.spi.BindingCase.SENSITIVE)
+            } ?: org.partiql.spi.BindingName("NO_SCHEMA_FOUND", org.partiql.spi.BindingCase.SENSITIVE)
+            val exprValue = value.invoke(env)
+            metadata.createValue(
+                session,
+                org.partiql.spi.BindingName(currentCatalog, org.partiql.spi.BindingCase.SENSITIVE),
+                BindingPath(
+                    listOf(
+                        currentSchema,
+                        org.partiql.spi.BindingName(name, org.partiql.spi.BindingCase.SENSITIVE)
+                    )
+                ),
+                ExprToPartiQLValue(exprValue, ExprToPartiQLValueType(exprValue))
+            )
+            exprValue
+        }
+    }
+
+    // TODO: Hack
+    /** Throw an error when the there's a type mismatch when converting ExprValue to PartiQLValue */
+    internal class ExprToPartiQLValueTypeMismatchException(expectedType: PartiQLValueType, actualType: PartiQLValueType) :
+        Exception("When converting ExprValue to PartiQLValue, expected a $expectedType, but received $actualType")
+
+    // TODO: Hack
+    @OptIn(PartiQLValueExperimental::class)
+    private fun ExprToPartiQLValue(exprValue: ExprValue, partiqlType: PartiQLValueType): PartiQLValue {
+        fun checkType(exprType: ExprValueType) {
+            if (exprValue.type != exprType) {
+                throw ExprToPartiQLValueTypeMismatchException(partiqlType, ExprToPartiQLValueType(exprValue))
+            }
+        }
+
+        return when (partiqlType) {
+            PartiQLValueType.BOOL -> {
+                checkType(ExprValueType.BOOL)
+                boolValue(exprValue.booleanValue())
+            }
+            PartiQLValueType.INT8 -> {
+                checkType(ExprValueType.INT)
+                int8Value(exprValue.numberValue().toByte())
+            }
+            PartiQLValueType.INT16 -> {
+                checkType(ExprValueType.INT)
+                int16Value(exprValue.numberValue().toShort())
+            }
+            PartiQLValueType.INT32 -> {
+                checkType(ExprValueType.INT)
+                int32Value(exprValue.numberValue().toInt())
+            }
+            PartiQLValueType.INT64 -> {
+                checkType(ExprValueType.INT)
+                int64Value(exprValue.numberValue().toLong())
+            }
+            PartiQLValueType.INT -> {
+                checkType(ExprValueType.INT)
+                int64Value(exprValue.numberValue().toLong())
+                // TODO: intValue(exprValue.numberValue().toDouble())
+            }
+            PartiQLValueType.DECIMAL -> {
+                checkType(ExprValueType.DECIMAL)
+                decimalValue(exprValue.numberValue() as BigDecimal)
+            }
+            PartiQLValueType.FLOAT32 -> {
+                checkType(ExprValueType.FLOAT)
+                float32Value(exprValue.numberValue().toFloat())
+            }
+            PartiQLValueType.FLOAT64 -> {
+                checkType(ExprValueType.FLOAT)
+                float64Value(exprValue.numberValue().toDouble())
+            }
+            PartiQLValueType.CHAR -> {
+                checkType(ExprValueType.STRING)
+                charValue(exprValue.stringValue().first())
+            }
+            PartiQLValueType.STRING -> {
+                checkType(ExprValueType.STRING)
+                stringValue(exprValue.stringValue())
+            }
+            PartiQLValueType.SYMBOL -> {
+                checkType(ExprValueType.SYMBOL)
+                symbolValue(exprValue.stringValue())
+            }
+            PartiQLValueType.BINARY -> TODO()
+            PartiQLValueType.BYTE -> TODO()
+            PartiQLValueType.BLOB -> {
+                checkType(ExprValueType.BLOB)
+                blobValue(exprValue.bytesValue())
+            }
+            PartiQLValueType.CLOB -> {
+                checkType(ExprValueType.CLOB)
+                clobValue(exprValue.bytesValue())
+            }
+            PartiQLValueType.DATE -> {
+                checkType(ExprValueType.DATE)
+                dateValue(exprValue.dateValue())
+            }
+            PartiQLValueType.TIME -> {
+                checkType(ExprValueType.TIME)
+                timeValue(
+                    exprValue.timeValue().localTime,
+                    exprValue.timeValue().precision,
+                    exprValue.timeValue().zoneOffset,
+                    true
+                )
+            }
+            PartiQLValueType.TIMESTAMP -> TODO()
+            PartiQLValueType.INTERVAL -> TODO()
+            PartiQLValueType.BAG -> {
+                checkType(ExprValueType.BAG)
+                bagValue(exprValue.map { ExprToPartiQLValue(it, ExprToPartiQLValueType(it)) })
+            }
+            PartiQLValueType.LIST -> {
+                checkType(ExprValueType.LIST)
+                listValue(exprValue.map { ExprToPartiQLValue(it, ExprToPartiQLValueType(it)) })
+            }
+            PartiQLValueType.SEXP -> {
+                checkType(ExprValueType.SEXP)
+                sexpValue(exprValue.map { ExprToPartiQLValue(it, ExprToPartiQLValueType(it)) })
+            }
+            PartiQLValueType.STRUCT -> {
+                checkType(ExprValueType.STRUCT)
+                structValue(exprValue.map {
+                    Pair(
+                        it.name?.stringValue() ?: "",
+                        ExprToPartiQLValue(it, ExprToPartiQLValueType(it))
+                    )
+                })
+            }
+            PartiQLValueType.NULL -> {
+                checkType(ExprValueType.NULL)
+                nullValue()
+            }
+            PartiQLValueType.MISSING -> {
+                checkType(ExprValueType.MISSING)
+                missingValue()
+            }
+            PartiQLValueType.NULLABLE_BOOL -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.BOOL -> boolValue(exprValue.booleanValue())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_BOOL,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_INT8 -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.INT -> int8Value(exprValue.numberValue().toByte())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_INT8,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_INT16 -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.INT -> int16Value(exprValue.numberValue().toShort())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_INT16,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_INT32 -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.INT -> int32Value(exprValue.numberValue().toInt())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_INT32,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_INT64 -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.INT -> int64Value(exprValue.numberValue().toLong())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_INT64,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_INT -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.INT -> intValue(exprValue.numberValue() as BigInteger)
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_INT,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_DECIMAL -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.DECIMAL -> decimalValue(exprValue.numberValue() as BigDecimal)
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_DECIMAL,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_FLOAT32 -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.FLOAT -> float32Value(exprValue.numberValue().toFloat())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_FLOAT32,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_FLOAT64 -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.FLOAT -> float64Value(exprValue.numberValue().toDouble())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_FLOAT64,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_CHAR -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.STRING -> charValue(exprValue.stringValue().first())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_CHAR,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_STRING -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.STRING -> stringValue(exprValue.stringValue())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_STRING,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_SYMBOL -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.SYMBOL -> symbolValue(exprValue.stringValue())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_SYMBOL,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_BINARY -> TODO()
+            PartiQLValueType.NULLABLE_BYTE -> TODO()
+            PartiQLValueType.NULLABLE_BLOB -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.BLOB -> blobValue(exprValue.bytesValue())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_BLOB,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_CLOB -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.CLOB -> clobValue(exprValue.bytesValue())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_CLOB,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_DATE -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.DATE -> dateValue(exprValue.dateValue())
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_DATE,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_TIME -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.TIME -> timeValue(
+                    exprValue.timeValue().localTime,
+                    exprValue.timeValue().precision,
+                    exprValue.timeValue().zoneOffset,
+                    true
+                )
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_TIME,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_TIMESTAMP -> TODO()
+            PartiQLValueType.NULLABLE_INTERVAL -> TODO()
+            PartiQLValueType.NULLABLE_BAG -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.BAG -> bagValue(exprValue.map { ExprToPartiQLValue(it, ExprToPartiQLValueType(it)) })
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_BAG,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_LIST -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.LIST -> listValue(exprValue.map { ExprToPartiQLValue(it, ExprToPartiQLValueType(it)) })
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_LIST,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_SEXP -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.SEXP -> sexpValue(exprValue.map { ExprToPartiQLValue(it, ExprToPartiQLValueType(it)) })
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_SEXP,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+            PartiQLValueType.NULLABLE_STRUCT -> when (exprValue.type) {
+                ExprValueType.NULL -> nullValue()
+                ExprValueType.STRUCT -> structValue(exprValue.map {
+                    Pair(
+                        it.name?.stringValue() ?: "",
+                        ExprToPartiQLValue(it, ExprToPartiQLValueType(it))
+                    )
+                })
+                else -> throw ExprToPartiQLValueTypeMismatchException(
+                    PartiQLValueType.NULLABLE_STRUCT,
+                    ExprToPartiQLValueType(exprValue)
+                )
+            }
+        }
+    }
+
+    fun ExprToPartiQLValueType(exprValue: ExprValue): PartiQLValueType {
+        return when (exprValue.type) {
+            ExprValueType.MISSING -> PartiQLValueType.MISSING
+            ExprValueType.NULL -> PartiQLValueType.NULL
+            ExprValueType.BOOL -> PartiQLValueType.BOOL
+            ExprValueType.INT -> PartiQLValueType.INT
+            ExprValueType.FLOAT -> PartiQLValueType.FLOAT32
+            ExprValueType.DECIMAL -> PartiQLValueType.DECIMAL
+            ExprValueType.DATE -> PartiQLValueType.DATE
+            ExprValueType.TIMESTAMP -> PartiQLValueType.TIMESTAMP
+            ExprValueType.TIME -> PartiQLValueType.TIME
+            ExprValueType.SYMBOL -> PartiQLValueType.SYMBOL
+            ExprValueType.STRING -> PartiQLValueType.STRING
+            ExprValueType.CLOB -> PartiQLValueType.CLOB
+            ExprValueType.BLOB -> PartiQLValueType.BLOB
+            ExprValueType.LIST -> PartiQLValueType.LIST
+            ExprValueType.SEXP -> PartiQLValueType.SEXP
+            ExprValueType.STRUCT -> PartiQLValueType.STRUCT
+            ExprValueType.BAG -> PartiQLValueType.BAG
+            ExprValueType.GRAPH -> TODO()
+        }
+    }
 
     private fun compileDml(node: PartiqlAst.Statement.Dml): ThunkEnv =
         { _ ->

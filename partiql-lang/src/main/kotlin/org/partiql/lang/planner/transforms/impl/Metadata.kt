@@ -96,6 +96,11 @@ internal class Metadata(
         }
     }
 
+    public fun catalogExists(session: ConnectorSession, catalog: BindingName): Boolean {
+        catalogMap.keys.firstOrNull { catalog.isEquivalentTo(it) } ?: return false
+        return true
+    }
+
     public fun getObjectHandle(session: ConnectorSession, catalog: BindingName, path: BindingPath): ObjectHandle? {
         val metadataInfo = getMetadata(session, catalog) ?: return null
         return metadataInfo.metadata.getObjectHandle(session, path)?.let {
@@ -106,17 +111,43 @@ internal class Metadata(
         }
     }
 
+    public fun listSchemas(session: ConnectorSession, catalog: BindingName): List<String> {
+        val metadataInfo = getMetadata(session, catalog) ?: return emptyList()
+        return metadataInfo.metadata.listSchemas(session)
+    }
+
+    public fun listTables(session: ConnectorSession, catalog: BindingName, path: BindingPath): List<String> {
+        val metadataInfo = getMetadata(session, catalog) ?: return emptyList()
+        return metadataInfo.metadata.listTables(session, path)
+    }
+
+    public fun listValues(session: ConnectorSession, catalog: BindingName, path: BindingPath): List<String> {
+        val metadataInfo = getMetadata(session, catalog) ?: return emptyList()
+        return metadataInfo.metadata.listValues(session, path)
+    }
+
     public fun getObjectDescriptor(session: PlannerSession, handle: ObjectHandle): StaticType {
         val connectorSession = session.toConnectorSession()
         val metadata = getMetadata(session.toConnectorSession(), BindingName(handle.catalogName, BindingCase.SENSITIVE))!!.metadata
         return metadata.getObjectType(connectorSession, handle.connectorHandle)!!
     }
 
+    // TODO: COW Hack
+    // TODO: Exception hndling
     @OptIn(PartiQLValueExperimental::class)
     public fun getValue(session: ConnectorSession, handle: ObjectHandle): ExprValue {
         val metadata = getMetadata(session, BindingName(handle.catalogName, BindingCase.SENSITIVE))!!.metadata
         val partiqlValue = metadata.getValue(session, handle.connectorHandle)
         return partiqlValue.toExprValue()
+    }
+
+    // TODO: COW Hack
+    // TODO: Exception hndling
+    @OptIn(PartiQLValueExperimental::class)
+    public fun createValue(session: ConnectorSession, catalog: BindingName, path: BindingPath, value: PartiQLValue): Boolean {
+        val metadataInfo = getMetadata(session, catalog) ?: return false
+        metadataInfo.metadata.createValue(session, path, value)
+        return true
     }
 
     private fun getMetadata(connectorSession: ConnectorSession, catalogName: BindingName): MetadataInformation? {

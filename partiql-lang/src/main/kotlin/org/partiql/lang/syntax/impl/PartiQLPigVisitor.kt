@@ -111,6 +111,31 @@ internal class PartiQLPigVisitor(val customTypes: List<CustomType> = listOf(), p
         )
     }
 
+    override fun visitSetCatalog(ctx: PartiQLParser.SetCatalogContext): PartiqlAst.Statement.SetCatalog {
+        val metas = ctx.SET().getSourceMetaContainer()
+        return PartiqlAst.Statement.SetCatalog(catalog = visitSymbolPrimitive(ctx.symbolPrimitive()).name, metas)
+    }
+
+    override fun visitSetSchema(ctx: PartiQLParser.SetSchemaContext): PartiqlAst.Statement.SetSchema {
+        val metas = ctx.SET().getSourceMetaContainer()
+        return PartiqlAst.Statement.SetSchema(schema = visitSymbolPrimitive(ctx.symbolPrimitive()).name, metas)
+    }
+
+    override fun visitShowSchemas(ctx: PartiQLParser.ShowSchemasContext): PartiqlAst.Statement.ShowSchemas {
+        val metas = ctx.SHOW().getSourceMetaContainer()
+        return PartiqlAst.Statement.ShowSchemas(metas)
+    }
+
+    override fun visitShowTables(ctx: PartiQLParser.ShowTablesContext): PartiqlAst.Statement.ShowTables {
+        val metas = ctx.SHOW().getSourceMetaContainer()
+        return PartiqlAst.Statement.ShowTables(metas)
+    }
+
+    override fun visitShowValues(ctx: PartiQLParser.ShowValuesContext): PartiqlAst.Statement.ShowValues {
+        val metas = ctx.SHOW().getSourceMetaContainer()
+        return PartiqlAst.Statement.ShowValues(metas)
+    }
+
     override fun visitRoot(ctx: PartiQLParser.RootContext) = when (ctx.EXPLAIN()) {
         null -> visit(ctx.statement()) as PartiqlAst.Statement
         else -> PartiqlAst.build {
@@ -187,6 +212,12 @@ internal class PartiQLPigVisitor(val customTypes: List<CustomType> = listOf(), p
         val name = visitSymbolPrimitive(ctx.tableName().symbolPrimitive()).name
         val def = ctx.tableDef()?.let { visitTableDef(it) }
         createTable_(name, def, ctx.CREATE().getSourceMetaContainer())
+    }
+
+    override fun visitCreateValue(ctx: PartiQLParser.CreateValueContext) = PartiqlAst.build {
+        val name = visitSymbolPrimitive(ctx.tableName().symbolPrimitive()).name
+        val expr = visitExpr(ctx.expr())
+        createValue_(name, expr, ctx.CREATE().getSourceMetaContainer())
     }
 
     override fun visitCreateIndex(ctx: PartiQLParser.CreateIndexContext) = PartiqlAst.build {

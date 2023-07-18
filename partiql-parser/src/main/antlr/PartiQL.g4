@@ -19,6 +19,11 @@ statement
     | dml COLON_SEMI? EOF          # QueryDml
     | ddl COLON_SEMI? EOF          # QueryDdl
     | execCommand COLON_SEMI? EOF  # QueryExec
+    | SET CATALOG symbolPrimitive  # SetCatalog
+    | SET SCHEMA symbolPrimitive   # SetSchema
+    | SHOW SCHEMAS                 # ShowSchemas
+    | SHOW TABLES                  # ShowTables
+    | SHOW VALUES                  # ShowValues
     ;
 
 /**
@@ -83,6 +88,7 @@ ddl
 
 createCommand
     : CREATE TABLE tableName ( PAREN_LEFT tableDef PAREN_RIGHT )?                               # CreateTable
+    | CREATE VALUE tableName AS expr                                                            # CreateValue
     | CREATE INDEX ON symbolPrimitive PAREN_LEFT pathSimple ( COMMA pathSimple )* PAREN_RIGHT   # CreateIndex
     ;
 

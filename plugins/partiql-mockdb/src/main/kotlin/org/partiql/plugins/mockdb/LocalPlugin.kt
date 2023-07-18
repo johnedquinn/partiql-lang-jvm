@@ -25,7 +25,7 @@ import org.partiql.spi.function.PartiQLFunctionExperimental
  */
 class LocalPlugin : Plugin {
     override fun getConnectorFactories(): List<Connector.Factory> = listOf(LocalConnector.Factory())
-    @PartiQLFunctionExperimental
+    @OptIn(PartiQLFunctionExperimental::class)
     override fun getFunctions(): List<PartiQLFunction> = listOf(
         TrimLead, Pow
     )

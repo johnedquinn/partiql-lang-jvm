@@ -49,4 +49,18 @@ public interface ConnectorMetadata {
     // TODO: COW Hack
     @OptIn(PartiQLValueExperimental::class)
     public fun getValue(session: ConnectorSession, handle: ConnectorObjectHandle): PartiQLValue
+
+    // TODO: COW Hack
+    @OptIn(PartiQLValueExperimental::class)
+    public fun createValue(session: ConnectorSession, path: BindingPath, value: PartiQLValue)
+
+    // TODO: COW Hack
+    @OptIn(PartiQLValueExperimental::class)
+    public fun createTable(session: ConnectorSession, path: BindingPath, schema: StaticType)
+
+    public fun listSchemas(session: ConnectorSession): List<String>
+    
+    public fun listTables(session: ConnectorSession, schema: BindingPath): List<String>
+    
+    public fun listValues(session: ConnectorSession, schema: BindingPath): List<String>
 }

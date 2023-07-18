@@ -71,6 +71,11 @@ internal class PartiQLCompilerDefault(
                 PartiQLStatement { expression.eval(it).toValue() }
             }
             is PartiqlPhysical.Statement.Explain -> throw PartiQLException("Unable to compile EXPLAIN without details.")
+            is PartiqlPhysical.Statement.SetCatalog -> TODO()
+            is PartiqlPhysical.Statement.SetSchema -> TODO()
+            is PartiqlPhysical.Statement.ShowSchemas -> TODO()
+            is PartiqlPhysical.Statement.ShowTables -> TODO()
+            is PartiqlPhysical.Statement.ShowValues -> TODO()
         }
     }
 
@@ -80,6 +85,11 @@ internal class PartiQLCompilerDefault(
             is PartiqlPhysical.Statement.Exec,
             is PartiqlPhysical.Statement.Query -> compile(statement)
             is PartiqlPhysical.Statement.Explain -> PartiQLStatement { compileExplain(stmt, details) }
+            is PartiqlPhysical.Statement.SetCatalog -> TODO()
+            is PartiqlPhysical.Statement.SetSchema -> TODO()
+            is PartiqlPhysical.Statement.ShowSchemas -> TODO()
+            is PartiqlPhysical.Statement.ShowTables -> TODO()
+            is PartiqlPhysical.Statement.ShowValues -> TODO()
         }
     }
 
