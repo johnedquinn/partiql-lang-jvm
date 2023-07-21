@@ -166,15 +166,15 @@ internal sealed class AbstractPipeline(open val options: PipelineOptions) {
                 addPlugin(plugin)
             }
             addCatalogEntry(
-                "iondb" to ionStructOf(
+                "redox" to ionStructOf(
                     field(org.partiql.spi.connector.Constants.CONFIG_KEY_CONNECTOR_NAME, ionString("ion-db")),
-                    field("ion-db-root", ionString("/Users/johqunn/.partiql/ion"))
+                    field("ion-db-root", ionString("/Users/johqunn/.partiql/redox"))
                 )
             )
             addCatalogEntry(
-                "andes" to ionStructOf(
-                    field(org.partiql.spi.connector.Constants.CONFIG_KEY_CONNECTOR_NAME, ionString("localdb")),
-                    field("localdb_root", ionString("/Users/johqunn/.partiql/ion"))
+                "other" to ionStructOf(
+                    field(org.partiql.spi.connector.Constants.CONFIG_KEY_CONNECTOR_NAME, ionString("ion-db")),
+                    field("ion-db-root", ionString("/Users/johqunn/.partiql/other"))
                 )
             )
             compileOptions(compileOptions)

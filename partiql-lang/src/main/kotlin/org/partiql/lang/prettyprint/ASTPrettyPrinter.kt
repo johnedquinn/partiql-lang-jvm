@@ -55,6 +55,9 @@ class ASTPrettyPrinter {
             is PartiqlAst.Statement.SetCatalog -> TODO()
             is PartiqlAst.Statement.SetSchema -> TODO()
             is PartiqlAst.Statement.ShowSchemas -> TODO()
+            is PartiqlAst.Statement.ShowCatalogs -> TODO()
+            is PartiqlAst.Statement.ShowCurrentCatalog -> TODO()
+            is PartiqlAst.Statement.ShowCurrentSchema -> TODO()
             is PartiqlAst.Statement.ShowTables -> TODO()
             is PartiqlAst.Statement.ShowValues -> TODO()
         }
@@ -89,6 +92,9 @@ class ASTPrettyPrinter {
         is PartiqlAst.Statement.SetCatalog -> TODO()
         is PartiqlAst.Statement.SetSchema -> TODO()
         is PartiqlAst.Statement.ShowSchemas -> TODO()
+        is PartiqlAst.Statement.ShowCatalogs -> TODO()
+        is PartiqlAst.Statement.ShowCurrentCatalog -> TODO()
+        is PartiqlAst.Statement.ShowCurrentSchema -> TODO()
         is PartiqlAst.Statement.ShowTables -> TODO()
         is PartiqlAst.Statement.ShowValues -> TODO()
     }

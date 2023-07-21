@@ -111,6 +111,10 @@ internal class Metadata(
         }
     }
 
+    public fun listCatalogs(): List<String> {
+        return catalogMap.keys.toList()
+    }
+
     public fun listSchemas(session: ConnectorSession, catalog: BindingName): List<String> {
         val metadataInfo = getMetadata(session, catalog) ?: return emptyList()
         return metadataInfo.metadata.listSchemas(session)

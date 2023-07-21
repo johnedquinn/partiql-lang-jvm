@@ -112,8 +112,8 @@ internal class Shell(
     
     val session = EvaluationSession.build {
         user(currentUser)
-        catalog("iondb")
-        schema("hello")
+        // catalog("iondb")
+        // schema("hello")
     }
 
     fun start() {

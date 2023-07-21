@@ -425,6 +425,9 @@ internal class EvaluatingCompiler(
             is PartiqlAst.Statement.SetCatalog -> compileSetCatalog(ast, ast.metas)
             is PartiqlAst.Statement.SetSchema -> compileSetSchema(ast, ast.metas)
             is PartiqlAst.Statement.ShowSchemas -> compileShowSchemas(ast, ast.metas)
+            is PartiqlAst.Statement.ShowCatalogs -> compileShowCatalogs(ast, ast.metas)
+            is PartiqlAst.Statement.ShowCurrentCatalog -> compileShowCurrentCatalog(ast, ast.metas)
+            is PartiqlAst.Statement.ShowCurrentSchema -> compileShowCurrentSchema(ast, ast.metas)
             is PartiqlAst.Statement.ShowTables -> compileShowTables(ast, ast.metas)
             is PartiqlAst.Statement.ShowValues -> compileShowValues(ast, ast.metas)
         }
@@ -448,6 +451,28 @@ internal class EvaluatingCompiler(
         return thunkFactory.thunkEnv(metas) { env ->
             env.session.currentSchema = name
             ExprValue.newBoolean(true)
+        }
+    }
+
+    private fun compileShowCatalogs(node: PartiqlAst.Statement.ShowCatalogs, metas: MetaContainer): ThunkEnv {
+        val schemas = metadata.listCatalogs().map { ExprValue.newString(it) }
+        return thunkFactory.thunkEnv(metas) { _ ->
+            ExprValue.newList(schemas)
+        }
+    }
+    
+    private fun compileShowCurrentCatalog(node: PartiqlAst.Statement.ShowCurrentCatalog, metas: MetaContainer): ThunkEnv {
+        return thunkFactory.thunkEnv(metas) { env ->
+            val currentCatalog = env.session.currentCatalog ?: return@thunkEnv ExprValue.newString("<NO CATALOG SPECIFIED>")
+            ExprValue.newString(currentCatalog)
+        }
+    }
+
+    private fun compileShowCurrentSchema(node: PartiqlAst.Statement.ShowCurrentSchema, metas: MetaContainer): ThunkEnv {
+        return thunkFactory.thunkEnv(metas) { env ->
+            val currentCatalog = env.session.currentCatalog ?: return@thunkEnv ExprValue.newString("<NO CATALOG SPECIFIED>")
+            val schema = env.session.currentSchema ?: "<NO SCHEMA SPECIFIED>"
+            ExprValue.newString("$currentCatalog.$schema")
         }
     }
 
@@ -2988,7 +3013,7 @@ internal class EvaluatingCompiler(
                         org.partiql.spi.BindingName(name, org.partiql.spi.BindingCase.SENSITIVE)
                     )
                 ),
-                nullValue()
+                bagValue(emptyList())
             )
             ExprValue.newBoolean(true)
         }
@@ -3001,10 +3026,10 @@ internal class EvaluatingCompiler(
         val value = compileAstExpr(node.def)
         return thunkFactory.thunkEnv(metas) { env ->
             val session = env.session.toConnectorSession()
-            val currentCatalog = env.session.currentCatalog ?: "NO_CATALOG_FOUND"
+            val currentCatalog = env.session.currentCatalog ?: error("Not in a catalog")
             val currentSchema = env.session.currentSchema?.let {
                 org.partiql.spi.BindingName(it, org.partiql.spi.BindingCase.SENSITIVE)
-            } ?: org.partiql.spi.BindingName("NO_SCHEMA_FOUND", org.partiql.spi.BindingCase.SENSITIVE)
+            } ?: error("NO_SCHEMA_FOUND")
             val exprValue = value.invoke(env)
             metadata.createValue(
                 session,
@@ -3339,17 +3364,13 @@ internal class EvaluatingCompiler(
         }
     }
 
-    private fun compileDml(node: PartiqlAst.Statement.Dml): ThunkEnv =
-        { _ ->
-            err(
-                "DML operations are not supported yet",
-                ErrorCode.EVALUATOR_FEATURE_NOT_SUPPORTED_YET,
-                errorContextFrom(node.metas).also {
-                    it[Property.FEATURE_NAME] = "DML Operations"
-                },
-                internal = false
-            )
-        }
+    private fun compileDml(node: PartiqlAst.Statement.Dml): ThunkEnv = when (node.operations.ops.first()) {
+        is PartiqlAst.DmlOp.Insert -> TODO()
+        is PartiqlAst.DmlOp.Delete -> TODO()
+        is PartiqlAst.DmlOp.InsertValue -> TODO()
+        is PartiqlAst.DmlOp.Remove -> TODO()
+        is PartiqlAst.DmlOp.Set -> TODO()
+    }
 
     private fun compileExec(node: PartiqlAst.Statement.Exec): ThunkEnv {
         val metas = node.metas

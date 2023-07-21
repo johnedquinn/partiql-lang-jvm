@@ -211,6 +211,9 @@ internal class PhysicalPlanCompilerImpl(
             is PartiqlPhysical.Statement.SetCatalog -> TODO()
             is PartiqlPhysical.Statement.SetSchema -> TODO()
             is PartiqlPhysical.Statement.ShowSchemas -> TODO()
+            is PartiqlPhysical.Statement.ShowCatalogs -> TODO()
+            is PartiqlPhysical.Statement.ShowCurrentCatalog -> TODO()
+            is PartiqlPhysical.Statement.ShowCurrentSchema -> TODO()
             is PartiqlPhysical.Statement.ShowTables -> TODO()
             is PartiqlPhysical.Statement.ShowValues -> TODO()
         }

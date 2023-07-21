@@ -47,8 +47,11 @@ may then be further optimized by selecting better implementations of each operat
             // SET SCHEMA <schema name>
             (set_schema schema::symbol)
 
-            // SHOW SCHEMAS
+            // SHOW <something>
+            (show_catalogs)
             (show_schemas)
+            (show_current_catalog)
+            (show_current_schema)
             (show_tables)
             (show_values)
 

@@ -121,6 +121,21 @@ internal class PartiQLPigVisitor(val customTypes: List<CustomType> = listOf(), p
         return PartiqlAst.Statement.SetSchema(schema = visitSymbolPrimitive(ctx.symbolPrimitive()).name, metas)
     }
 
+    override fun visitShowCatalogs(ctx: PartiQLParser.ShowCatalogsContext): PartiqlAst.Statement.ShowCatalogs {
+        val metas = ctx.SHOW().getSourceMetaContainer()
+        return PartiqlAst.Statement.ShowCatalogs(metas)
+    }
+
+    override fun visitShowCurrentCatalog(ctx: PartiQLParser.ShowCurrentCatalogContext): PartiqlAst.Statement.ShowCurrentCatalog {
+        val metas = ctx.SHOW().getSourceMetaContainer()
+        return PartiqlAst.Statement.ShowCurrentCatalog(metas)
+    }
+
+    override fun visitShowCurrentSchema(ctx: PartiQLParser.ShowCurrentSchemaContext): PartiqlAst.Statement.ShowCurrentSchema {
+        val metas = ctx.SHOW().getSourceMetaContainer()
+        return PartiqlAst.Statement.ShowCurrentSchema(metas)
+    }
+
     override fun visitShowSchemas(ctx: PartiQLParser.ShowSchemasContext): PartiqlAst.Statement.ShowSchemas {
         val metas = ctx.SHOW().getSourceMetaContainer()
         return PartiqlAst.Statement.ShowSchemas(metas)

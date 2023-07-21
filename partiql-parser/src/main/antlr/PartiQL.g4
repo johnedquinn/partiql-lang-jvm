@@ -21,7 +21,10 @@ statement
     | execCommand COLON_SEMI? EOF  # QueryExec
     | SET CATALOG symbolPrimitive  # SetCatalog
     | SET SCHEMA symbolPrimitive   # SetSchema
+    | SHOW CATALOGS                # ShowCatalogs
     | SHOW SCHEMAS                 # ShowSchemas
+    | SHOW CURRENT CATALOG         # ShowCurrentCatalog
+    | SHOW CURRENT SCHEMA          # ShowCurrentSchema
     | SHOW TABLES                  # ShowTables
     | SHOW VALUES                  # ShowValues
     ;

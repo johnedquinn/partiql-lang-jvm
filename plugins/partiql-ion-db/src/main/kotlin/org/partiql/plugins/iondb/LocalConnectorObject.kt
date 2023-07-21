@@ -17,7 +17,11 @@ package org.partiql.plugins.iondb
 import com.amazon.ion.IonReader
 import com.amazon.ion.IonType
 import com.amazon.ion.system.IonReaderBuilder
+import com.amazon.ionelement.api.StructElement
+import com.amazon.ionelement.api.SymbolElement
+import com.amazon.ionelement.api.createIonElementLoader
 import org.partiql.spi.connector.ConnectorObject
+import org.partiql.types.PartiQLValueType
 import org.partiql.types.StaticType
 import org.partiql.value.PartiQLValue
 import org.partiql.value.PartiQLValueExperimental
@@ -38,31 +42,56 @@ import java.nio.file.Path
 import kotlin.io.path.inputStream
 
 /**
- * This mock implementation of [ConnectorObject] is used to parse the [schema] into a [StaticType]. Currently,
+ * This mock implementation of [ConnectorObject] is used to parse the [valuePath] into a [StaticType]. Currently,
  * this implementation allows for Tables, Structs, Ints, Decimals, and Booleans. When [LocalConnectorMetadata] requests
  * for the object's [StaticType], it returns the parsed descriptor.
  */
 internal class LocalConnectorObject(
-    private val schema: Path
+    private val valuePath: Path,
+    private val descriptorPath: Path
 ) : ConnectorObject {
 
     private val readerBuilder = IonReaderBuilder.standard()
+    private val ionLoader = createIonElementLoader()
 
     public fun getDescriptor(): StaticType = StaticType.ANY
 
+    private fun getValueDescriptor(): PartiQLValueType {
+        val stream = descriptorPath.inputStream()
+        val reader = readerBuilder.build(stream)
+        val element = ionLoader.loadSingleElement(reader)
+        reader.close()
+        if (element !is StructElement) { error("Expected struct descriptor") }
+        val type = element["type"] as? SymbolElement ?: error("Expected symbol type")
+        return PartiQLValueType.valueOf(type.textValue)
+    }
+
     @OptIn(PartiQLValueExperimental::class)
     public fun getValue(): PartiQLValue {
-        val stream = schema.inputStream()
+        val descriptor = getValueDescriptor()
+        val isCollection = when (descriptor) {
+            PartiQLValueType.BAG, PartiQLValueType.SEXP, PartiQLValueType.LIST -> true
+            else -> false
+        }
+        val stream = valuePath.inputStream()
         val reader = readerBuilder.build(stream)
         val values = mutableListOf<PartiQLValue>()
         var value = getNextPartiQLValue(reader)
+        if (isCollection.not()) {
+            return value ?: error("Expected a single PartiQL Value but got none")
+        }
         while (value != null) {
             values.add(value)
             value = getNextPartiQLValue(reader)
         }
         reader.close()
         stream.close()
-        return bagValue(values)
+        return when (descriptor) {
+            PartiQLValueType.BAG -> bagValue(values)
+            PartiQLValueType.LIST -> listValue(values)
+            PartiQLValueType.SEXP -> sexpValue(values)
+            else -> error("Shouldn't have gotten here")
+        }
     }
 
     @OptIn(PartiQLValueExperimental::class)
