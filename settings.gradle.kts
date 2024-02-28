@@ -33,5 +33,6 @@ include(
     "test:partiql-tests-runner",
     "test:partiql-randomized-tests",
     "test:sprout-tests",
-    "examples",
+    "examples:lang-examples",
+    "examples:cache-eval"
 )
