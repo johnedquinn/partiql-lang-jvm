@@ -4,7 +4,7 @@ import org.partiql.planner.internal.casts.Coercions
 import org.partiql.planner.internal.ir.Ref
 import org.partiql.planner.internal.typer.CompilerType
 import org.partiql.planner.internal.typer.PlanTyper.Companion.toCType
-import org.partiql.spi.fn.FnSignature
+import org.partiql.spi.fn.Function
 import org.partiql.types.PType.Kind
 
 /**
@@ -34,9 +34,9 @@ internal object FnResolver {
      * @param args
      * @return
      */
-    fun resolve(variants: List<FnSignature>, args: List<CompilerType>): FnMatch? {
+    fun resolve(variants: List<Function>, args: List<CompilerType>): FnMatch? {
         val candidates = variants
-            .filter { it.parameters.size == args.size }
+            .filter { it.getParameters().size == args.size }
             .ifEmpty { return null }
 
         // 1. Look for exact match
@@ -58,7 +58,7 @@ internal object FnResolver {
         return resolveBestMatch(candidates, args)
     }
 
-    private fun resolveBestMatch(candidates: List<FnSignature>, args: List<CompilerType>): FnMatch.Static? {
+    private fun resolveBestMatch(candidates: List<Function>, args: List<CompilerType>): FnMatch.Static? {
         // 3. Discard functions that cannot be matched (via implicit coercion or exact matches)
         val invocableMatches = match(candidates, args).ifEmpty { return null }
         if (invocableMatches.size == 1) {
@@ -86,7 +86,7 @@ internal object FnResolver {
      * @param args
      * @return
      */
-    private fun match(candidates: List<FnSignature>, args: List<CompilerType>): List<MatchResult> {
+    private fun match(candidates: List<Function>, args: List<CompilerType>): List<MatchResult> {
         val matches = mutableSetOf<MatchResult>()
         for (candidate in candidates) {
             val m = candidate.match(args) ?: continue
@@ -116,11 +116,12 @@ internal object FnResolver {
     /**
      * Check if this function accepts the exact input argument types. Assume same arity.
      */
-    private fun FnSignature.matchesExactly(args: List<CompilerType>): Boolean {
+    private fun Function.matchesExactly(args: List<CompilerType>): Boolean {
+        val parameters = getParameters()
         for (i in args.indices) {
             val a = args[i]
             val p = parameters[i]
-            if (a != p.type) return false
+            if (a != p.getType()) return false
         }
         return true
     }
@@ -131,7 +132,8 @@ internal object FnResolver {
      * @param args
      * @return
      */
-    private fun FnSignature.match(args: List<CompilerType>): MatchResult? {
+    private fun Function.match(args: List<CompilerType>): MatchResult? {
+        val parameters = getParameters()
         val mapping = arrayOfNulls<Ref.Cast?>(args.size)
         var exactInputTypes: Int = 0
         for (i in args.indices) {
@@ -139,19 +141,19 @@ internal object FnResolver {
             val p = parameters[i]
             when {
                 // 1. Exact match
-                arg == p.type -> {
+                arg == p.getType() -> {
                     exactInputTypes++
                     continue
                 }
                 // 2. Match ANY parameter, no coercion needed
-                p.type.kind == Kind.DYNAMIC -> continue
+                p.getType().kind == Kind.DYNAMIC -> continue
                 arg.kind == Kind.UNKNOWN -> continue
                 // 3. Allow for ANY arguments
                 arg.kind == Kind.DYNAMIC -> {
-                    mapping[i] = Ref.Cast(arg, p.type.toCType(), Ref.Cast.Safety.UNSAFE, true)
+                    mapping[i] = Ref.Cast(arg, p.getType().toCType(), Ref.Cast.Safety.UNSAFE, true)
                 }
                 // 4. Check for a coercion
-                else -> when (val coercion = Coercions.get(arg, p.type)) {
+                else -> when (val coercion = Coercions.get(arg, p.getType())) {
                     null -> return null // short-circuit
                     else -> mapping[i] = coercion
                 }
@@ -170,7 +172,7 @@ internal object FnResolver {
 
     private object MatchResultComparator : Comparator<MatchResult> {
         override fun compare(o1: MatchResult, o2: MatchResult): Int {
-            return FnComparator.reversed().compare(o1.match.signature, o2.match.signature)
+            return FnComparator.reversed().compare(o1.match.function, o2.match.function)
         }
     }
 }

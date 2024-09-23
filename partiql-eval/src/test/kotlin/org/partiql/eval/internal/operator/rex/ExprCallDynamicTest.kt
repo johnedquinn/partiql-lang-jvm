@@ -7,15 +7,15 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.partiql.eval.internal.Environment
 import org.partiql.eval.internal.helpers.ValueUtility.check
-import org.partiql.eval.value.Datum
-import org.partiql.eval.value.Datum.bag
-import org.partiql.eval.value.Datum.bool
-import org.partiql.eval.value.Datum.integer
-import org.partiql.eval.value.Datum.list
-import org.partiql.eval.value.Datum.string
-import org.partiql.spi.fn.Fn
-import org.partiql.spi.fn.FnParameter
 import org.partiql.spi.fn.FnSignature
+import org.partiql.spi.fn.Function
+import org.partiql.spi.fn.Parameter
+import org.partiql.spi.value.Datum
+import org.partiql.spi.value.Datum.bag
+import org.partiql.spi.value.Datum.bool
+import org.partiql.spi.value.Datum.integer
+import org.partiql.spi.value.Datum.list
+import org.partiql.spi.value.Datum.string
 import org.partiql.types.PType
 import org.partiql.value.PartiQLValueExperimental
 import org.partiql.value.PartiQLValueType
@@ -38,7 +38,7 @@ class ExprCallDynamicTest {
             val expr = ExprCallDynamic(
                 name = "example_function",
                 candidateFns = candidates,
-                args = arrayOf(ExprLiteral(lhs), ExprLiteral(rhs)),
+                args = arrayOf(ExprLit(lhs), ExprLit(rhs)),
             )
             val result = expr.eval(Environment.empty).check(PartiQLValueType.INT32)
             assertEquals(expectedIndex, result.int)
@@ -64,14 +64,14 @@ class ExprCallDynamicTest {
             )
 
             @OptIn(PartiQLValueExperimental::class)
-            internal val candidates: Array<Fn> = params.mapIndexed { index, it ->
-                object : Fn {
+            internal val candidates: Array<Function> = params.mapIndexed { index, it ->
+                object : Function {
                     override val signature: FnSignature = FnSignature(
                         name = "example_function",
                         returns = PType.integer(),
                         parameters = listOf(
-                            FnParameter("first", type = it.first.toPType()),
-                            FnParameter("second", type = it.second.toPType()),
+                            Parameter("first", type = it.first.toPType()),
+                            Parameter("second", type = it.second.toPType()),
                         )
                     )
 

@@ -1,7 +1,7 @@
 package org.partiql.planner.internal
 
-import org.partiql.spi.fn.FnParameter
-import org.partiql.spi.fn.FnSignature
+import org.partiql.spi.fn.Function
+import org.partiql.spi.fn.Parameter
 import org.partiql.types.PType
 import org.partiql.types.PType.Kind
 
@@ -11,17 +11,19 @@ import org.partiql.types.PType.Kind
  *  1. Fewest args first
  *  2. Parameters are compared left-to-right
  */
-internal object FnComparator : Comparator<FnSignature> {
+internal object FnComparator : Comparator<Function> {
 
-    override fun compare(fn1: FnSignature, fn2: FnSignature): Int {
+    override fun compare(fn1: Function, fn2: Function): Int {
+        val params1 = fn1.getParameters()
+        val params2 = fn2.getParameters()
         // Compare number of arguments
-        if (fn1.parameters.size != fn2.parameters.size) {
-            return fn1.parameters.size - fn2.parameters.size
+        if (params1.size != params2.size) {
+            return params1.size - params2.size
         }
         // Compare operand type precedence
-        for (i in fn1.parameters.indices) {
-            val p1 = fn1.parameters[i]
-            val p2 = fn2.parameters[i]
+        for (i in params1.indices) {
+            val p1 = params1[i]
+            val p2 = params2[i]
             val comparison = p1.compareTo(p2)
             if (comparison != 0) return comparison
         }
@@ -29,8 +31,8 @@ internal object FnComparator : Comparator<FnSignature> {
         return 0
     }
 
-    private fun FnParameter.compareTo(other: FnParameter): Int =
-        comparePrecedence(this.type, other.type)
+    private fun Parameter.compareTo(other: Parameter): Int =
+        comparePrecedence(this.getType(), other.getType())
 
     private fun comparePrecedence(t1: PType, t2: PType): Int {
         if (t1 == t2) return 0

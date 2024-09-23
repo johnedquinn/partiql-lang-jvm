@@ -1,12 +1,11 @@
 package org.partiql.plugins.local
 
-import org.partiql.planner.catalog.Catalog
-import org.partiql.planner.catalog.Function
-import org.partiql.planner.catalog.Identifier
-import org.partiql.planner.catalog.Name
-import org.partiql.planner.catalog.Namespace
-import org.partiql.planner.catalog.Session
-import org.partiql.planner.catalog.Table
+import org.partiql.spi.catalog.Catalog
+import org.partiql.spi.catalog.Identifier
+import org.partiql.spi.catalog.Name
+import org.partiql.spi.catalog.Namespace
+import org.partiql.spi.catalog.Session
+import org.partiql.spi.catalog.Table
 import java.nio.file.Path
 import kotlin.io.path.isDirectory
 import kotlin.io.path.nameWithoutExtension
@@ -92,8 +91,6 @@ internal class LocalCatalog(
             .filter { it.isDirectory }
             .map { toNamespace(it.toPath()) }
     }
-
-    override fun getFunctions(session: Session, name: Name): Collection<Function> = emptyList()
 
     private fun toPath(namespace: Namespace): Path {
         var curr = root

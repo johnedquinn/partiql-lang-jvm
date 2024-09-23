@@ -5,8 +5,10 @@ import org.junit.jupiter.api.fail
 import org.partiql.planner.internal.FnMatch
 import org.partiql.planner.internal.FnResolver
 import org.partiql.planner.internal.typer.PlanTyper.Companion.toCType
-import org.partiql.spi.fn.FnParameter
 import org.partiql.spi.fn.FnSignature
+import org.partiql.spi.fn.Function
+import org.partiql.spi.fn.Parameter
+import org.partiql.spi.value.Datum
 import org.partiql.types.PType
 
 /**
@@ -24,10 +26,10 @@ class FnResolverTest {
                 name = "plus",
                 returns = PType.doublePrecision(),
                 parameters = listOf(
-                    FnParameter("arg-0", PType.doublePrecision()),
-                    FnParameter("arg-1", PType.doublePrecision()),
+                    Parameter("arg-0", PType.doublePrecision()),
+                    Parameter("arg-1", PType.doublePrecision()),
                 ),
-            )
+            ).toFunction(),
         )
         val args = listOf(PType.integer().toCType(), PType.doublePrecision().toCType())
         val expectedImplicitCasts = listOf(true, false)
@@ -42,11 +44,11 @@ class FnResolverTest {
                 name = "split",
                 returns = PType.array(),
                 parameters = listOf(
-                    FnParameter("value", PType.string()),
-                    FnParameter("delimiter", PType.string()),
+                    Parameter("value", PType.string()),
+                    Parameter("delimiter", PType.string()),
                 ),
                 isNullable = false,
-            )
+            ).toFunction()
         )
         val args = listOf(PType.string().toCType(), PType.string().toCType())
         val expectedImplicitCasts = listOf(false, false)
@@ -54,12 +56,20 @@ class FnResolverTest {
         case.assert()
     }
 
+    private fun FnSignature.toFunction(): Function {
+        val self = this
+        return object : Function {
+            override val signature: FnSignature = self
+            override fun invoke(args: Array<Datum>): Datum = Datum.nullValue()
+        }
+    }
+
     private sealed class Case {
 
         abstract fun assert()
 
         class Success(
-            private val variants: List<FnSignature>,
+            private val variants: List<Function>,
             private val inputs: List<CompilerType>,
             private val expectedImplicitCast: List<Boolean>,
         ) : Case() {

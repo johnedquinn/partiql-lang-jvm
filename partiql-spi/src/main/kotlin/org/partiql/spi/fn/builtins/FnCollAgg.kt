@@ -3,10 +3,9 @@
 
 package org.partiql.spi.fn.builtins
 
-import org.partiql.eval.value.Datum
-import org.partiql.spi.fn.Fn
-import org.partiql.spi.fn.FnParameter
 import org.partiql.spi.fn.FnSignature
+import org.partiql.spi.fn.Function
+import org.partiql.spi.fn.Parameter
 import org.partiql.spi.fn.builtins.internal.Accumulator
 import org.partiql.spi.fn.builtins.internal.AccumulatorAnySome
 import org.partiql.spi.fn.builtins.internal.AccumulatorAvg
@@ -16,13 +15,14 @@ import org.partiql.spi.fn.builtins.internal.AccumulatorEvery
 import org.partiql.spi.fn.builtins.internal.AccumulatorMax
 import org.partiql.spi.fn.builtins.internal.AccumulatorMin
 import org.partiql.spi.fn.builtins.internal.AccumulatorSum
+import org.partiql.spi.value.Datum
 import org.partiql.types.PType
 
 internal abstract class Fn_COLL_AGG__BAG__ANY(
     name: String,
     private val isDistinct: Boolean,
     private val accumulator: () -> Accumulator,
-) : Fn {
+) : Function {
 
     private fun getAccumulator(): Accumulator = when (isDistinct) {
         true -> AccumulatorDistinct(accumulator.invoke())
@@ -37,7 +37,7 @@ internal abstract class Fn_COLL_AGG__BAG__ANY(
             name = name,
             returns = PType.dynamic(),
             parameters = listOf(
-                FnParameter("value", PType.bag()),
+                Parameter("value", PType.bag()),
             ),
             isNullCall = true,
             isNullable = true
