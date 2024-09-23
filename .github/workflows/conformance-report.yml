@@ -112,7 +112,7 @@ jobs:
           ARGS="-t $T -bf $BF -bl $BL -bt $BT -tf $TF -tl $TL -tt $TT -o $O"
           echo "Comment CROSS-ENGINE"
           pwd
-          ls
+          ls -R
           echo $ARGS
           gradle :test:partiql-tests-runner:run --args="$ARGS"
       - name: "Artifact CROSS-COMMIT Report (appends to comparison_report.md)"
@@ -129,7 +129,7 @@ jobs:
           ARGS="-t $T -bf $BF -bl $BL -bt $BT -tf $TF -tl $TL -tt $TT -o $O"
           echo "Comment CROSS-COMMIT"
           pwd
-          ls
+          ls -R
           echo $ARGS
           gradle :test:partiql-tests-runner:run --args="$ARGS"
       # Print conformance report to GitHub actions workflow summary page
@@ -156,7 +156,7 @@ jobs:
           ARGS="-t $T -bf $BF -bl $BL -bt $BT -tf $TF -tl $TL -tt $TT -o $O -l $L"
           echo "Comment CROSS-ENGINE"
           pwd
-          ls
+          ls -R
           echo $ARGS
           gradle :test:partiql-tests-runner:run --args="$ARGS"
       - name: "Comment CROSS-COMMIT Report (appends to comparison_report_limited.md)"
@@ -174,7 +174,7 @@ jobs:
           ARGS="-t $T -bf $BF -bl $BL -bt $BT -tf $TF -tl $TL -tt $TT -o $O -l $L"
           echo "Comment CROSS-COMMIT"
           pwd
-          ls
+          ls -R
           echo $ARGS
           gradle :test:partiql-tests-runner:run --args="$ARGS"
       # Find comment w/ conformance comparison if previous comment published
