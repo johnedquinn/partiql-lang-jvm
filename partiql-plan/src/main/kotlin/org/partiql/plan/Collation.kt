@@ -5,7 +5,7 @@ import org.partiql.plan.rex.Rex
 /**
  * TODO DOCUMENTATION
  */
-public interface Collation {
+public interface Collation : PlanNode {
 
     /**
      * TODO REPLACE WITH COLUMN INDEX

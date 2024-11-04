@@ -5,6 +5,7 @@ import org.partiql.plan.Collation
 import org.partiql.plan.Exclusion
 import org.partiql.plan.JoinType
 import org.partiql.plan.Plan
+import org.partiql.plan.Visitor
 import org.partiql.plan.rel.RelType
 import org.partiql.plan.rex.Rex
 import org.partiql.plan.rex.RexCase
@@ -48,6 +49,9 @@ internal class PlanTransform(private val flags: Set<PlannerFlag>) {
         return object : Plan {
             override fun getOperation(): org.partiql.plan.Operation = object : org.partiql.plan.Operation.Query {
                 override fun getRex(): Rex = root
+                override fun <R, C> accept(visitor: org.partiql.plan.Visitor<R, C>, ctx: C): R {
+                    return visitor.visitQuery(this, ctx)
+                }
             }
         }
     }

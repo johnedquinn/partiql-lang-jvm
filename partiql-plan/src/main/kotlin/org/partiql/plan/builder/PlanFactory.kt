@@ -4,7 +4,10 @@ import org.partiql.plan.AggregateCall
 import org.partiql.plan.Collation
 import org.partiql.plan.Exclusion
 import org.partiql.plan.JoinType
+import org.partiql.plan.Operation
+import org.partiql.plan.Plan
 import org.partiql.plan.RelAggregateCallImpl
+import org.partiql.plan.Version
 import org.partiql.plan.rel.Rel
 import org.partiql.plan.rel.RelAggregate
 import org.partiql.plan.rel.RelAggregateImpl
@@ -110,6 +113,19 @@ public interface PlanFactory {
          */
         @JvmStatic
         public val STANDARD: PlanFactory = object : PlanFactory {}
+    }
+
+    /**
+     * TODO
+     */
+    public fun plan(
+        operation: Operation
+    ): Plan {
+        return object : Plan {
+            override fun getOperation(): Operation {
+                return operation
+            }
+        }
     }
 
     // --- REL OPERATORS ------------------------------------------------------------------------------------------------

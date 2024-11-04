@@ -2,6 +2,7 @@ package org.partiql.cli.pipeline
 
 import org.partiql.ast.v1.Statement
 import org.partiql.cli.ErrorCodeString
+import org.partiql.cli.optimization.ProjectionPushdown
 import org.partiql.eval.Mode
 import org.partiql.eval.compiler.PartiQLCompiler
 import org.partiql.parser.PartiQLParser
@@ -29,7 +30,8 @@ internal class Pipeline private constructor(
     fun execute(statement: String, session: Session): Datum {
         val ast = parse(statement)
         val plan = plan(ast, session)
-        return execute(plan, session)
+        val optimizedPlan = optimize(plan)
+        return execute(optimizedPlan, session)
     }
 
     private fun parse(source: String): Statement {
@@ -47,6 +49,10 @@ internal class Pipeline private constructor(
             planner.plan(statement, session, ctx)
         }
         return result.plan
+    }
+
+    private fun optimize(plan: Plan): Plan {
+        return ProjectionPushdown().accept(plan)
     }
 
     private fun execute(plan: Plan, session: Session): Datum {

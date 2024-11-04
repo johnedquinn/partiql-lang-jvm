@@ -3,7 +3,7 @@ package org.partiql.plan
 /**
  * A [Plan] holds operations that can be executed.
  */
-public interface Plan {
+public interface Plan : PlanNode {
 
     /**
      * The plan version for serialization and debugging.
@@ -22,4 +22,8 @@ public interface Plan {
      * @return
      */
     public fun getOperation(): Operation
+
+    override fun <R : Any?, C : Any?> accept(visitor: Visitor<R, C>, ctx: C): R {
+        return visitor.visitPlan(this, ctx)
+    }
 }

@@ -57,7 +57,13 @@ public interface Visitor<R, C> {
 
     public fun defaultReturn(operator: Operator, ctx: C): R
 
-    public fun visit(operator: Operator, ctx: C): R = operator.accept(this, ctx)
+    public fun visit(node: PlanNode, ctx: C): R = node.accept(this, ctx)
+
+    public fun visitPlan(node: Plan, ctx: C): R = node.accept(this, ctx)
+
+    public fun visitQuery(node: Operation.Query, ctx: C): R = node.accept(this, ctx)
+
+    public fun visitAggregateCall(node: AggregateCall, ctx: C): R = node.accept(this, ctx)
 
     // --[Rel]-----------------------------------------------------------------------------------------------------------
 

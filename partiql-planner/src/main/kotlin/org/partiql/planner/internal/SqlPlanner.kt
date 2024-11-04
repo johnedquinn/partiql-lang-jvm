@@ -3,6 +3,7 @@ package org.partiql.planner.internal
 import org.partiql.ast.v1.Statement
 import org.partiql.plan.Operation
 import org.partiql.plan.Plan
+import org.partiql.plan.Visitor
 import org.partiql.plan.builder.PlanFactory
 import org.partiql.plan.rex.Rex
 import org.partiql.planner.PartiQLPlanner
@@ -64,6 +65,10 @@ internal class SqlPlanner(
                     return object : Operation.Query {
                         override fun getRex(): Rex {
                             return PlanFactory.STANDARD.rexError(PType.dynamic())
+                        }
+
+                        override fun <R, C> accept(visitor: Visitor<R, C>, ctx: C): R {
+                            return visitor.visitQuery(this, ctx)
                         }
                     }
                 }
