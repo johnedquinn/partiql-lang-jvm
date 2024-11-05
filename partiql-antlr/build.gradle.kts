@@ -13,26 +13,28 @@
  */
 
 plugins {
+    id(Plugins.antlr)
     id(Plugins.conventions)
-    id(Plugins.publish)
-    id(Plugins.kotlinLombok) version Versions.kotlinLombok
+    id(Plugins.shadow)
 }
 
 dependencies {
-    api(project(":partiql-antlr", configuration = "shadow"))
-    api(project(":partiql-ast"))
-    api(project(":partiql-types"))
-    implementation(Deps.ionElement)
-    compileOnly(Deps.lombok)
-    annotationProcessor(Deps.lombok)
+    antlr(Deps.antlr)
+    shadow(Deps.antlrRuntime)
 }
 
-// TODO: Remove
+val relocations = mapOf(
+    "org.antlr" to "org.partiql.parser.thirdparty.antlr"
+)
+
 tasks.shadowJar {
+    dependsOn(tasks.named("generateGrammarSource"))
     configurations = listOf(project.configurations.shadow.get())
+    for ((from, to) in relocations) {
+        relocate(from, to)
+    }
 }
 
-// TODO: Remove
 // Workaround for https://github.com/johnrengelman/shadow/issues/651
 components.withType(AdhocComponentWithVariants::class.java).forEach { c ->
     c.withVariantsFromConfiguration(project.configurations.shadowRuntimeElements.get()) {
@@ -40,34 +42,42 @@ components.withType(AdhocComponentWithVariants::class.java).forEach { c ->
     }
 }
 
-apiValidation {
-    ignoredPackages.addAll(
-        listOf(
-            "org.partiql.parser.internal"
-        )
-    )
+tasks.generateGrammarSource {
+    val antlrPackage = "org.partiql.parser.internal.antlr"
+    val antlrSources = "$buildDir/generated-src/${antlrPackage.replace('.', '/')}"
+    maxHeapSize = "64m"
+    arguments = listOf("-visitor", "-long-messages", "-package", antlrPackage)
+    outputDirectory = File(antlrSources)
 }
 
-// TODO: Figure out
+tasks.javadoc {
+    exclude("**/antlr/**")
+}
+
+tasks.compileKotlin {
+    dependsOn(tasks.generateGrammarSource)
+}
+
+tasks.compileTestKotlin {
+    dependsOn(tasks.withType<AntlrTask>())
+}
+
 tasks.withType<Jar>().configureEach {
     // ensure "generateGrammarSource" is called before "sourcesJar".
+    dependsOn(tasks.withType<AntlrTask>())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-// TODO: Figure out
+tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+    dependsOn(tasks.withType<AntlrTask>())
+}
+
+tasks.runKtlintCheckOverTestSourceSet {
+    dependsOn(tasks.withType<AntlrTask>())
+}
+
 tasks.processResources {
     from("src/main/antlr") {
         include("**/*.g4")
     }
-}
-
-publish {
-    artifactId = "partiql-parser"
-    name = "PartiQL Parser"
-    description = "PartiQL's Parser"
-    // `antlr` dependency configuration adds the ANTLR API configuration (and Maven `compile` dependency scope on
-    // publish). It's a known issue w/ the ANTLR gradle plugin. Follow https://github.com/gradle/gradle/issues/820
-    // for context. In the maven publishing step, any API or IMPLEMENTATION dependencies w/ "antlr4" non-runtime
-    // dependency will be omitted from the created Maven POM.
-    excludedDependencies = setOf("antlr4")
 }

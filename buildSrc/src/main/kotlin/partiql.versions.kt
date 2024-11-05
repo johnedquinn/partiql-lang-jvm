@@ -112,4 +112,5 @@ object Plugins {
     const val library = "org.gradle.java-library"
     const val kotlinLombok = "org.jetbrains.kotlin.plugin.lombok"
     const val testFixtures = "org.gradle.java-test-fixtures"
+    const val shadow = "com.github.johnrengelman.shadow"
 }

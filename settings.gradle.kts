@@ -16,6 +16,7 @@ rootProject.name = "partiql"
 
 include(
     ":custom-ktlint-rules",
+    "partiql-antlr",
     "partiql-ast",
     "partiql-cli",
     "partiql-coverage",
