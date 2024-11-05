@@ -53,20 +53,20 @@ class ProjectionPushdown : Visitor<PlanNode, Unit> {
     }
 
     override fun visitSelect(rex: RexSelect, ctx: Unit): PlanNode {
-        val input = visit(rex.getInput(), ctx) as Rel
         val constructor = visit(rex.getConstructor(), ctx) as Rex
+        val input = visit(rex.getInput(), ctx) as Rel
         return factory.rexSelect(input, constructor)
     }
 
     override fun visitProject(rel: RelProject, ctx: Unit): PlanNode {
-        val input = visit(rel.getInput(), ctx) as Rel
         val projections = rel.getProjections().map { visit(it, ctx) as Rex }
+        val input = visit(rel.getInput(), ctx) as Rel
         return factory.relProject(input, projections)
     }
 
     override fun visitFilter(rel: RelFilter, ctx: Unit): PlanNode {
-        val input = visit(rel.getInput(), ctx) as Rel
         val predicate = visit(rel.getPredicate(), ctx) as Rex
+        val input = visit(rel.getInput(), ctx) as Rel
         return factory.relFilter(input, predicate)
     }
 
