@@ -69,5 +69,5 @@ publish {
     // publish). It's a known issue w/ the ANTLR gradle plugin. Follow https://github.com/gradle/gradle/issues/820
     // for context. In the maven publishing step, any API or IMPLEMENTATION dependencies w/ "antlr4" non-runtime
     // dependency will be omitted from the created Maven POM.
-    excludedDependencies = setOf("antlr4")
+    // excludedDependencies = setOf("antlr4")
 }

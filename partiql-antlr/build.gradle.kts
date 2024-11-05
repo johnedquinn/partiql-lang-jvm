@@ -23,16 +23,19 @@ dependencies {
     shadow(Deps.antlrRuntime)
 }
 
-val relocations = mapOf(
-    "org.antlr" to "org.partiql.parser.thirdparty.antlr"
-)
+// val relocations = mapOf(
+//     "org.antlr" to "org.partiql.parser.thirdparty.antlr"
+// )
 
 tasks.shadowJar {
     dependsOn(tasks.named("generateGrammarSource"))
+//    dependencies {
+//        exclude(dependency(Deps.antlrRuntime))
+//    }
     configurations = listOf(project.configurations.shadow.get())
-    for ((from, to) in relocations) {
-        relocate(from, to)
-    }
+//    for ((from, to) in relocations) {
+//        relocate(from, to)
+//    }
 }
 
 // Workaround for https://github.com/johnrengelman/shadow/issues/651

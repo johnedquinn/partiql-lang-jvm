@@ -13,6 +13,12 @@
  */
 package org.partiql.cli.shell
 
+import org.antlr.v4.runtime.BaseErrorListener
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.RecognitionException
+import org.antlr.v4.runtime.Recognizer
+import org.antlr.v4.runtime.Token
 import org.jline.reader.Highlighter
 import org.jline.reader.LineReader
 import org.jline.utils.AttributedString
@@ -20,11 +26,6 @@ import org.jline.utils.AttributedStringBuilder
 import org.jline.utils.AttributedStyle
 import org.partiql.parser.internal.antlr.PartiQLParser
 import org.partiql.parser.internal.antlr.PartiQLTokens
-import org.partiql.parser.thirdparty.antlr.v4.runtime.BaseErrorListener
-import org.partiql.parser.thirdparty.antlr.v4.runtime.CharStreams
-import org.partiql.parser.thirdparty.antlr.v4.runtime.CommonTokenStream
-import org.partiql.parser.thirdparty.antlr.v4.runtime.RecognitionException
-import org.partiql.parser.thirdparty.antlr.v4.runtime.Recognizer
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
@@ -122,12 +123,12 @@ internal object ShellHighlighter : Highlighter {
             msg: String?,
             e: RecognitionException?
         ) {
-            if (offendingSymbol != null && offendingSymbol is org.partiql.parser.thirdparty.antlr.v4.runtime.Token && offendingSymbol.type != PartiQLParser.EOF) {
+            if (offendingSymbol != null && offendingSymbol is Token && offendingSymbol.type != PartiQLParser.EOF) {
                 throw OffendingSymbolException(offendingSymbol)
             }
         }
 
-        class OffendingSymbolException(val offendingSymbol: org.partiql.parser.thirdparty.antlr.v4.runtime.Token) : Exception()
+        class OffendingSymbolException(val offendingSymbol: Token) : Exception()
     }
 
     private fun getTokenStream(input: String): CommonTokenStream {
