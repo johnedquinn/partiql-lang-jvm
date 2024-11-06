@@ -34,7 +34,13 @@ internal class IonDatumReader internal constructor(
     /**
      * Helper for current span on errors.
      */
-    private fun span(): Span = reader.asFacet(SpanProvider::class.java).currentSpan()
+    private fun span(): Span? {
+        return try {
+            reader.asFacet(SpanProvider::class.java).currentSpan()
+        } catch (t: Throwable) {
+            return null
+        }
+    }
 
     /**
      * From AutoCloseable.

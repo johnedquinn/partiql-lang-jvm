@@ -33,10 +33,16 @@ internal class Pipeline private constructor(
         val plan = plan(ast, session)
         println("Plan:")
         printPlan(plan)
-        val optimizedPlan = optimize(plan)
-        println("Optimized Plan:")
-        optimizedPlan.debugString()
-        printPlan(optimizedPlan)
+        val optimizedPlan = try {
+            val op = optimize(plan)
+            println("Optimized Plan:")
+            printPlan(op)
+            op
+        } catch (t: Throwable) {
+            println("COULD NOT OPTIMIZE PLAN")
+            t.printStackTrace()
+            plan
+        }
         return execute(optimizedPlan, session)
     }
 

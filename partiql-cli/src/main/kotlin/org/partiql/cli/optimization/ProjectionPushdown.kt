@@ -10,6 +10,7 @@ import org.partiql.plan.rel.Rel
 import org.partiql.plan.rel.RelFilter
 import org.partiql.plan.rel.RelProject
 import org.partiql.plan.rel.RelScan
+import org.partiql.plan.rel.RelScanTable
 import org.partiql.plan.rex.Rex
 import org.partiql.plan.rex.RexCall
 import org.partiql.plan.rex.RexLit
@@ -19,6 +20,8 @@ import org.partiql.plan.rex.RexSelect
 import org.partiql.plan.rex.RexStruct
 import org.partiql.plan.rex.RexTable
 import org.partiql.plan.rex.RexVar
+import org.partiql.spi.catalog.Table
+import org.partiql.types.PType
 
 class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
 
@@ -120,7 +123,7 @@ class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
         val newCtx = Ctx(true)
         val root = visit(rex.getOperand(), newCtx) as Rex
         val symbol = rex.getSymbol()
-        val path = factory.rexPathSymbol(rex, symbol)
+        val path = factory.rexPathSymbol(root, symbol)
         return potentiallyAdd(root, path)
     }
 
@@ -128,6 +131,7 @@ class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
         potentiallyAdd(rex, rex) // TODO: Need to handle scenarios in which we project out the row/struct completely.
         if (!ctx.isInPath && rex.getDepth() == 0) { // TODO: Only handle single depths rn
             potentiallyAdd(rex, rex)
+            projectsAll.add(rex.getOffset()) // TODO: Think about
         }
         return rex
     }
@@ -141,9 +145,76 @@ class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
         val input: Rex = visit(rel.getInput(), ctx) as Rex
         // If there are projections, return a scan-project
         if (!projections[0].isNullOrEmpty()) { //  && !projectsAll.contains(0) TODO: Should we ignore if the scan rex is referenced directly? Probably.
+            val scanTable = convertRexToScanTable(input)
+            if (scanTable != null) {
+                return scanTable
+            }
             val scan = factory.relScan(input)
             return factory.relProject(scan, projections[0]!!.toList())
         }
         return factory.relScan(input)
+    }
+
+    /**
+     * TODO
+     */
+    private fun convertRexToScanTable(input: Rex): RelScanTable? {
+        if (input is RexTable) {
+            val table = input.getTable()
+            val type = table.getSchema()
+            if ((table.getFlags() and Table.ALLOWS_RECORD_SCAN) == Table.ALLOWS_RECORD_SCAN && type.kind == PType.Kind.ROW) {
+                val columnIndexes = projections[0]!!.map { proj ->
+                    when (proj) {
+                        is RexPathKey -> getIndexOfPathKey(type, proj) ?: return null
+                        is RexPathSymbol -> getIndexOfPathSymbol(type, proj) ?: return null
+                        else -> return null
+                    }
+                }
+                return factory.relScanTable(input, columnIndexes)
+            }
+        }
+        return null
+    }
+
+    /**
+     * TODO
+     * Assumes that [row] is definitely a ROW type.
+     */
+    private fun getIndexOfPathSymbol(row: PType, path: RexPathSymbol): Int? {
+        val keyString = path.getSymbol()
+        row.fields.forEachIndexed { index, field ->
+            if (field.name.equals(keyString, true)) {
+                return index
+            }
+        }
+        return null
+    }
+
+    /**
+     * TODO
+     * Assumes that [row] is definitely a ROW type.
+     */
+    private fun getIndexOfPathKey(row: PType, path: RexPathKey): Int? {
+        val keyString = getString(path.getKey()) ?: return null
+        row.fields.forEachIndexed { index, field ->
+            if (field.name == keyString) {
+                return index
+            }
+        }
+        return null
+    }
+
+    private fun getString(key: Rex): String? {
+        if (key !is RexLit) {
+            return null
+        }
+        val datum = key.getValue()
+        if (datum.isNull || datum.isMissing) {
+            return null
+        }
+        return when (datum.type.kind) {
+            PType.Kind.STRING, PType.Kind.CHAR, PType.Kind.VARCHAR -> datum.string
+            else -> null
+        }
     }
 }

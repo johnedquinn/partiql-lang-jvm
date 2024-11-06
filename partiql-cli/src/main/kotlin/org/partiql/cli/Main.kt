@@ -262,9 +262,10 @@ internal class MainCommand : Runnable {
      */
     private fun DatumReader.readAll(): List<Datum> {
         val values = mutableListOf<Datum>()
-        val next = next()
+        var next = next()
         while (next != null) {
             values.add(next)
+            next = next()
         }
         return values
     }
@@ -275,10 +276,14 @@ internal class MainCommand : Runnable {
     private fun stream(): InputStream? {
         val streams: MutableList<InputStream> = mutableListOf()
         if (program?.second != null) {
+            println(program)
             streams.add(program!!.second!!.inputStream())
         }
         if (files != null) {
-            streams.addAll(files!!.map { it.inputStream() })
+            streams.addAll(files!!.map {
+                println(it.absolutePath)
+                it.inputStream()
+            })
         }
         if (streams.isEmpty() && System.`in`.available() != 0) {
             streams.add(System.`in`)
