@@ -35,6 +35,14 @@ internal class RexTableImpl(table: Table) : RexTable {
         return true
     }
 
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "table" to _table,
+            "type" to _type
+        )
+    }
+
     override fun hashCode(): Int {
         var result = 1
         result = 31 * result + _table.hashCode()

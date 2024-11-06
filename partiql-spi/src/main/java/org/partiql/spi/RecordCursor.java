@@ -14,4 +14,12 @@ public interface RecordCursor {
      */
     @NotNull
     Datum getDatum(int field);
+
+    /**
+     * TODO
+     * @return TODO
+     */
+    boolean next();
+
+    // We can always add getInt(int field), getDouble(int field), etc.
 }

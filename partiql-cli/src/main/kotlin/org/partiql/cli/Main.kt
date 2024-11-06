@@ -15,10 +15,14 @@
 
 package org.partiql.cli
 
+import org.partiql.cli.catalogs.ColumnarCatalog
 import org.partiql.cli.io.Format
 import org.partiql.cli.pipeline.Pipeline
 import org.partiql.cli.shell.Shell
+import org.partiql.spi.RecordCursor
+import org.partiql.spi.RecordSet
 import org.partiql.spi.catalog.Catalog
+import org.partiql.spi.catalog.Identifier
 import org.partiql.spi.catalog.Name
 import org.partiql.spi.catalog.Session
 import org.partiql.spi.catalog.Table
@@ -253,7 +257,7 @@ internal class MainCommand : Runnable {
                 )
             )
             .build()
-        return listOf(catalog)
+        return listOf(catalog, ColumnarCatalog("columnar"))
     }
 
     /**

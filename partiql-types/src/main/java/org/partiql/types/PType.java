@@ -2,6 +2,8 @@ package org.partiql.types;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -706,6 +708,15 @@ public interface PType {
     @NotNull
     static PType row(@NotNull Collection<Field> fields) {
         return new PTypeRow(fields);
+    }
+
+    /**
+     * @return a PartiQL row type
+     * @deprecated this API is experimental and is subject to modification/deletion without prior notice.
+     */
+    @NotNull
+    static PType row(@NotNull Field... fields) {
+        return new PTypeRow(Arrays.stream(fields).collect(Collectors.toCollection(ArrayList::new)));
     }
 
     /**

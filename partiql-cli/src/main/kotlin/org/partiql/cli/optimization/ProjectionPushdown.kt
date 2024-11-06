@@ -162,7 +162,8 @@ class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
         if (input is RexTable) {
             val table = input.getTable()
             val type = table.getSchema()
-            if ((table.getFlags() and Table.ALLOWS_RECORD_SCAN) == Table.ALLOWS_RECORD_SCAN && type.kind == PType.Kind.ROW) {
+            val recordScan = table.getFlags() and Table.ALLOWS_RECORD_SCAN
+            if (recordScan == Table.ALLOWS_RECORD_SCAN && type.kind == PType.Kind.ROW) {
                 val columnIndexes = projections[0]!!.map { proj ->
                     when (proj) {
                         is RexPathKey -> getIndexOfPathKey(type, proj) ?: return null
