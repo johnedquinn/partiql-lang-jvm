@@ -60,19 +60,8 @@ internal class SqlPlanner(
         } catch (t: Throwable) {
             val error = PError.INTERNAL_ERROR(PErrorKind.SEMANTIC(), null, t)
             ctx.errorListener.report(error)
-            val plan = object : Plan {
-                override fun getOperation(): Operation {
-                    return object : Operation.Query {
-                        override fun getRex(): Rex {
-                            return PlanFactory.STANDARD.rexError(PType.dynamic())
-                        }
-
-                        override fun <R, C> accept(visitor: Visitor<R, C>, ctx: C): R {
-                            return visitor.visitQuery(this, ctx)
-                        }
-                    }
-                }
-            }
+            val factory = PlanFactory.STANDARD
+            val plan = factory.plan(factory.query(factory.rexError(PType.dynamic())))
             return PartiQLPlanner.Result(plan)
         }
     }

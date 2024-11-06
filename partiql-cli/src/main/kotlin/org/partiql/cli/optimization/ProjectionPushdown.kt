@@ -20,57 +20,75 @@ import org.partiql.plan.rex.RexStruct
 import org.partiql.plan.rex.RexTable
 import org.partiql.plan.rex.RexVar
 
-class ProjectionPushdown : Visitor<PlanNode, Unit> {
+class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
+
+    class Ctx(
+        val isInPath: Boolean
+    )
 
     private val factory = PlanFactory.STANDARD
-    private val projections = mutableMapOf<Int, MutableSet<Rex>>()
+    private val projections = mutableMapOf<Int, MutableList<Rex>>()
     private val projectsAll = mutableSetOf<Int>()
 
-    private fun potentiallyAdd(root: Rex, pathExpression: Rex) {
+    /**
+     * @return the index of the inserted key; null if not inserted.
+     */
+    private fun potentiallyAdd(root: Rex, pathExpression: Rex): Rex {
         if (root is RexVar && root.getDepth() == 0) { // Only allow for single depth right now
-            add(root.getOffset(), pathExpression)
+            val index = add(root.getOffset(), pathExpression)
+            return factory.rexVar(0, index)
         }
+        return pathExpression
     }
 
-    private fun add(local: Int, key: Rex) {
+    /**
+     * @return the index of the inserted key
+     */
+    private fun add(local: Int, key: Rex): Int {
         if (!projections.containsKey(local)) {
-            projections[local] = mutableSetOf()
+            projections[local] = mutableListOf()
         }
         projections[local]!!.add(key)
+        return projections[local]!!.lastIndex
     }
 
     fun accept(plan: Plan): Plan {
-        val root = visit(plan.getOperation(), Unit) as Operation
+        val root = visit(plan.getOperation(), Ctx(false)) as Operation
         return factory.plan(root)
     }
 
-    override fun defaultReturn(operator: Operator, ctx: Unit): PlanNode {
+    fun accept(node: PlanNode): PlanNode {
+        return visit(node, Ctx(false))
+    }
+
+    override fun defaultReturn(operator: Operator, ctx: Ctx): PlanNode {
         TODO("Not yet implemented")
     }
 
-    override fun visitLit(rex: RexLit, ctx: Unit): Rex {
+    override fun visitLit(rex: RexLit, ctx: Ctx): Rex {
         return rex
     }
 
-    override fun visitSelect(rex: RexSelect, ctx: Unit): PlanNode {
+    override fun visitSelect(rex: RexSelect, ctx: Ctx): RexSelect {
         val constructor = visit(rex.getConstructor(), ctx) as Rex
-        val input = visit(rex.getInput(), ctx) as Rel
+        val embedded = ProjectionPushdown()
+        val input = embedded.accept(rex.getInput()) as Rel
         return factory.rexSelect(input, constructor)
     }
 
-    override fun visitProject(rel: RelProject, ctx: Unit): PlanNode {
+    override fun visitProject(rel: RelProject, ctx: Ctx): PlanNode {
         val projections = rel.getProjections().map { visit(it, ctx) as Rex }
         val input = visit(rel.getInput(), ctx) as Rel
         return factory.relProject(input, projections)
     }
 
-    override fun visitFilter(rel: RelFilter, ctx: Unit): PlanNode {
+    override fun visitFilter(rel: RelFilter, ctx: Ctx): PlanNode {
         val predicate = visit(rel.getPredicate(), ctx) as Rex
         val input = visit(rel.getInput(), ctx) as Rel
         return factory.relFilter(input, predicate)
     }
 
-    override fun visitStruct(rex: RexStruct, ctx: Unit): PlanNode {
+    override fun visitStruct(rex: RexStruct, ctx: Ctx): PlanNode {
         val fields = rex.getFields().map { f ->
             val key = visit(f.getKey(), ctx) as Rex
             val value = visit(f.getValue(), ctx) as Rex
@@ -79,64 +97,50 @@ class ProjectionPushdown : Visitor<PlanNode, Unit> {
         return factory.rexStruct(fields)
     }
 
-    override fun visitCall(rex: RexCall, ctx: Unit): PlanNode {
+    override fun visitCall(rex: RexCall, ctx: Ctx): PlanNode {
         val args = rex.getArgs().map { visit(it, ctx) as Rex }
         val instance = rex.getFunction()
         return factory.rexCall(instance, args)
     }
 
-    override fun visitQuery(node: Operation.Query, ctx: Unit): Operation.Query {
+    override fun visitQuery(node: Operation.Query, ctx: Ctx): Operation.Query {
         val rex = visit(node.getRex(), ctx) as Rex
-        return object : Operation.Query {
-            override fun getRex(): Rex {
-                return rex
-            }
-
-            override fun <R : Any?, C : Any?> accept(visitor: Visitor<R, C>, ctx: C): R {
-                return visitor.visitQuery(this, ctx)
-            }
-        }
+        return factory.query(rex)
     }
 
-    override fun visitPathKey(rex: RexPathKey, ctx: Unit): Rex {
-        val root = visitExplicit(rex.getOperand(), ctx) as Rex
-        val key = visitExplicit(rex.getKey(), ctx) as Rex
+    override fun visitPathKey(rex: RexPathKey, ctx: Ctx): Rex {
+        val newCtx = Ctx(true)
+        val root = visit(rex.getOperand(), newCtx) as Rex
+        val key = visit(rex.getKey(), ctx) as Rex
         val path = factory.rexPathKey(root, key)
-        potentiallyAdd(root, key)
-        return path
+        return potentiallyAdd(root, path)
     }
 
-    override fun visitPathSymbol(rex: RexPathSymbol, ctx: Unit): Rex {
-        val root = visitExplicit(rex.getOperand(), ctx) as Rex
+    override fun visitPathSymbol(rex: RexPathSymbol, ctx: Ctx): Rex {
+        val newCtx = Ctx(true)
+        val root = visit(rex.getOperand(), newCtx) as Rex
         val symbol = rex.getSymbol()
         val path = factory.rexPathSymbol(rex, symbol)
-        potentiallyAdd(root, path)
-        return path
+        return potentiallyAdd(root, path)
     }
 
-    private fun visitExplicit(rex: Rex, ctx: Unit): PlanNode {
-        return when (rex) {
-            is RexVar -> return rex // No need to add to the block-list. See [visitVar]
-            else -> visit(rex, ctx)
-        }
-    }
-
-    override fun visitVar(rex: RexVar, ctx: Unit): Rex {
-        if (rex.getDepth() == 0) { // TODO: Only handle single depths rn
-            projectsAll.add(rex.getOffset())
+    override fun visitVar(rex: RexVar, ctx: Ctx): Rex {
+        potentiallyAdd(rex, rex) // TODO: Need to handle scenarios in which we project out the row/struct completely.
+        if (!ctx.isInPath && rex.getDepth() == 0) { // TODO: Only handle single depths rn
+            potentiallyAdd(rex, rex)
         }
         return rex
     }
 
     // TODO
-    override fun visitTable(rex: RexTable, ctx: Unit): Rex {
+    override fun visitTable(rex: RexTable, ctx: Ctx): Rex {
         return rex
     }
 
-    override fun visitScan(rel: RelScan, ctx: Unit): Rel {
+    override fun visitScan(rel: RelScan, ctx: Ctx): Rel {
         val input: Rex = visit(rel.getInput(), ctx) as Rex
         // If there are projections, return a scan-project
-        if (!projections[0].isNullOrEmpty() && !projectsAll.contains(0)) {
+        if (!projections[0].isNullOrEmpty()) { //  && !projectsAll.contains(0) TODO: Should we ignore if the scan rex is referenced directly? Probably.
             val scan = factory.relScan(input)
             return factory.relProject(scan, projections[0]!!.toList())
         }

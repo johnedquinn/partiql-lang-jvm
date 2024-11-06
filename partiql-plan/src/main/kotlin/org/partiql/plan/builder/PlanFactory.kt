@@ -6,8 +6,11 @@ import org.partiql.plan.Exclusion
 import org.partiql.plan.JoinType
 import org.partiql.plan.Operation
 import org.partiql.plan.Plan
+import org.partiql.plan.PlanImpl
+import org.partiql.plan.QueryImpl
 import org.partiql.plan.RelAggregateCallImpl
 import org.partiql.plan.Version
+import org.partiql.plan.VersionImpl
 import org.partiql.plan.rel.Rel
 import org.partiql.plan.rel.RelAggregate
 import org.partiql.plan.rel.RelAggregateImpl
@@ -35,6 +38,8 @@ import org.partiql.plan.rel.RelProject
 import org.partiql.plan.rel.RelProjectImpl
 import org.partiql.plan.rel.RelScan
 import org.partiql.plan.rel.RelScanImpl
+import org.partiql.plan.rel.RelScanTable
+import org.partiql.plan.rel.RelScanTableImpl
 import org.partiql.plan.rel.RelSort
 import org.partiql.plan.rel.RelSortImpl
 import org.partiql.plan.rel.RelType
@@ -121,11 +126,16 @@ public interface PlanFactory {
     public fun plan(
         operation: Operation
     ): Plan {
-        return object : Plan {
-            override fun getOperation(): Operation {
-                return operation
-            }
-        }
+        return PlanImpl(VersionImpl("1"), operation)
+    }
+
+    /**
+     * TODO
+     */
+    public fun query(
+        rex: Rex
+    ): Operation.Query {
+        return QueryImpl(rex)
     }
 
     // --- REL OPERATORS ------------------------------------------------------------------------------------------------
@@ -323,6 +333,15 @@ public interface PlanFactory {
      * @return
      */
     public fun relScan(input: Rex): RelScan = RelScanImpl(input)
+
+    /**
+     * Create a [RelScanTable] instance.
+     *
+     * @param input TODO
+     * @param columns TODO
+     * @return TODO
+     */
+    public fun relScanTable(input: RexTable, columns: List<Int>): RelScanTable = RelScanTableImpl(input, columns)
 
     /**
      * Create a [RelSort] instance.

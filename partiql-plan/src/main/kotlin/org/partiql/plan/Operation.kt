@@ -28,3 +28,18 @@ public interface Operation : PlanNode {
         }
     }
 }
+
+internal class QueryImpl(private val rex: Rex) : Operation.Query {
+    override fun getRex(): Rex = rex
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "rex" to rex.debugString(),
+        )
+    }
+
+    override fun toString(): String {
+        return "Query(rex=$rex)"
+    }
+}

@@ -7,6 +7,7 @@ import org.partiql.eval.Mode
 import org.partiql.eval.compiler.PartiQLCompiler
 import org.partiql.parser.PartiQLParser
 import org.partiql.plan.Plan
+import org.partiql.plan.PlanNode
 import org.partiql.planner.PartiQLPlanner
 import org.partiql.spi.Context
 import org.partiql.spi.catalog.Session
@@ -30,7 +31,12 @@ internal class Pipeline private constructor(
     fun execute(statement: String, session: Session): Datum {
         val ast = parse(statement)
         val plan = plan(ast, session)
+        println("Plan:")
+        printPlan(plan)
         val optimizedPlan = optimize(plan)
+        println("Optimized Plan:")
+        optimizedPlan.debugString()
+        printPlan(optimizedPlan)
         return execute(optimizedPlan, session)
     }
 
@@ -92,6 +98,58 @@ internal class Pipeline private constructor(
             val planner = PartiQLPlanner.builder().build()
             val compiler = PartiQLCompiler.builder().build()
             return Pipeline(parser, planner, compiler, ctx, mode)
+        }
+
+        private fun printPlan(plan: PlanNode) {
+            val planDetails = plan.debugString()
+            val sb = StringBuilder()
+            sb.printPlan(planDetails, 0)
+            val str = sb.toString()
+            println(str)
+        }
+
+        private fun StringBuilder.printPlan(map: Map<*, *>, indent: Int) {
+            appendLine("{")
+            map.entries.forEach { (k, v) ->
+                this.indent(indent + 1)
+                this.append("\"$k\": ")
+                when (v) {
+                    is String -> this.appendLine("\"$v\"")
+                    is Map<*, *> -> {
+                        this.printPlan(v, indent + 1)
+                    }
+                    is List<*> -> {
+                        this.printPlan(v, indent + 1)
+                    }
+                    else -> this.appendLine("$v")
+                }
+            }
+            indent(indent)
+            appendLine("}")
+        }
+
+        private fun StringBuilder.printPlan(list: List<*>, indent: Int) {
+            appendLine("[")
+            list.forEach { elt ->
+                indent(indent + 1)
+                when (elt) {
+                    is String -> this.append("\"$elt\"")
+                    is Map<*, *> -> {
+                        this.printPlan(elt, indent + 1)
+                    }
+                    is List<*> -> {
+                        this.printPlan(elt, indent + 1)
+                    }
+                }
+            }
+            indent(indent)
+            appendLine("]")
+        }
+
+        private fun StringBuilder.indent(int: Int) {
+            for (i in 0 until int) {
+                this.append(" ")
+            }
         }
     }
 

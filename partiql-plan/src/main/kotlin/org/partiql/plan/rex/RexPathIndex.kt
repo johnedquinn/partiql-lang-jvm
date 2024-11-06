@@ -31,4 +31,17 @@ internal class RexPathIndexImpl(operand: Rex, index: Rex, type: RexType) : RexPa
     override fun getType(): RexType = _type
 
     override fun getChildren(): Collection<Rex> = listOf(_operand, _index)
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "operand" to _operand.debugString(),
+            "symbol" to _index.debugString(),
+            "type" to _type.toString()
+        )
+    }
+
+    override fun toString(): String {
+        return "RexPathIndex(operand=$_operand, index=$_index, type=$_type)"
+    }
 }

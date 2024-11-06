@@ -1,31 +1,41 @@
 package org.partiql.plan.rel
 
 import org.partiql.plan.Visitor
-import org.partiql.plan.rex.Rex
+import org.partiql.plan.rex.RexTable
 
 /**
  * Logical scan corresponding to the clause `FROM <expression> AS <v>`.
  */
-public interface RelScan : Rel {
+public interface RelScanTable : Rel {
 
-    public fun getInput(): Rex
+    /**
+     * Returns the columns of the table to be scanned.
+     */
+    public fun getColumns(): List<Int>
+
+    public fun getTable(): RexTable
 
     override fun getChildren(): Collection<Rel> = emptyList()
 
     override fun isOrdered(): Boolean = false
 
-    override fun <R, C> accept(visitor: Visitor<R, C>, ctx: C): R = visitor.visitScan(this, ctx)
+    override fun <R, C> accept(visitor: Visitor<R, C>, ctx: C): R = visitor.visitScanTable(this, ctx)
 }
 
 /**
  * Default [RelScan] implementation.
  */
-internal class RelScanImpl(input: Rex) : RelScan {
+internal class RelScanTableImpl(input: RexTable, columns: List<Int>) : RelScanTable {
 
     // DO NOT USE FINAL
-    private var _input: Rex = input
+    private var _input: RexTable = input
+    private var _columns: List<Int> = columns
 
-    override fun getInput(): Rex = _input
+    override fun getColumns(): List<Int> {
+        return _columns
+    }
+
+    override fun getTable(): RexTable = _input
 
     override fun getType(): RelType {
         TODO("Implement getSchema for scan")
@@ -45,7 +55,7 @@ internal class RelScanImpl(input: Rex) : RelScan {
         return mutableMapOf(
             "name" to this::class.java.name,
             "input" to _input.debugString(),
-            // TODO "type" to getType()
+            "columns" to _columns
         )
     }
 

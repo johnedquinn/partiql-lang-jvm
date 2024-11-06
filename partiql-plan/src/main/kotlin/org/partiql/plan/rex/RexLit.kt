@@ -33,4 +33,15 @@ internal class RexLitImpl(value: Datum) : RexLit {
     }
 
     override fun hashCode(): Int = _value.hashCode()
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "lit" to _value,
+        )
+    }
+
+    override fun toString(): String {
+        return "Lit::$_value"
+    }
 }

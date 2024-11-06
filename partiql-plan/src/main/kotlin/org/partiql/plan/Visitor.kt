@@ -13,6 +13,7 @@ import org.partiql.plan.rel.RelLimit
 import org.partiql.plan.rel.RelOffset
 import org.partiql.plan.rel.RelProject
 import org.partiql.plan.rel.RelScan
+import org.partiql.plan.rel.RelScanTable
 import org.partiql.plan.rel.RelSort
 import org.partiql.plan.rel.RelUnion
 import org.partiql.plan.rel.RelUnpivot
@@ -92,6 +93,8 @@ public interface Visitor<R, C> {
     public fun visitProject(rel: RelProject, ctx: C): R = defaultVisit(rel, ctx)
 
     public fun visitScan(rel: RelScan, ctx: C): R = defaultVisit(rel, ctx)
+
+    public fun visitScanTable(rel: RelScanTable, ctx: C): R = defaultVisit(rel, ctx)
 
     public fun visitSort(rel: RelSort, ctx: C): R = defaultVisit(rel, ctx)
 

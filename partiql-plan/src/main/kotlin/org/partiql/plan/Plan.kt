@@ -27,3 +27,24 @@ public interface Plan : PlanNode {
         return visitor.visitPlan(this, ctx)
     }
 }
+
+internal class PlanImpl(
+    private val version: Version,
+    private val operation: Operation
+) : Plan {
+    override fun getVersion(): Version = version
+
+    override fun getOperation(): Operation = operation
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "version" to version,
+            "operation" to operation.debugString(),
+        )
+    }
+
+    override fun toString(): String {
+        return "Plan(version=$version, operation=$operation)"
+    }
+}

@@ -62,4 +62,17 @@ internal class RelFilterImpl(input: Rel, predicate: Rex) : RelFilter {
         result = 31 * result + _predicate.hashCode()
         return result
     }
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "input" to _input.debugString(),
+            "predicate" to _predicate.debugString(),
+            // TODO "type" to getType()
+        )
+    }
+
+    override fun toString(): String {
+        return "RelFilterImpl(input=$_input, predicate=$_predicate)"
+    }
 }

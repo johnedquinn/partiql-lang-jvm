@@ -52,4 +52,24 @@ public class RelProjectImpl(input: Rel, projections: List<Rex>) : RelProject {
         result = 31 * result + _projections.hashCode()
         return result
     }
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "input" to _input.debugString(),
+            "projections" to _projections.map { it.debugString() },
+            // TODO "type" to getType()
+        )
+    }
+
+    override fun toString(): String {
+        val sb = StringBuilder()
+        sb.append("RelProjectImpl(")
+        sb.append("input=")
+        sb.append(_input)
+        sb.append(", projections=")
+        sb.append(_projections)
+        sb.append(")")
+        return sb.toString()
+    }
 }

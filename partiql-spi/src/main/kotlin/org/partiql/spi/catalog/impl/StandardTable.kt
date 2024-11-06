@@ -1,5 +1,6 @@
 package org.partiql.spi.catalog.impl
 
+import org.partiql.spi.RecordSet
 import org.partiql.spi.catalog.Name
 import org.partiql.spi.catalog.Table
 import org.partiql.spi.value.Datum
@@ -24,6 +25,10 @@ internal class StandardTable(
     override fun getName(): Name = name
     override fun getSchema(): PType = schema
     override fun getDatum(): Datum = datum
+
+    override fun getRecordSet(): RecordSet {
+        TODO("Not yet implemented")
+    }
 
     // TODO REMOVE ME, THIS IS REQUIRED FOR EQUALITY IN UNIT TESTS
     override fun equals(other: Any?): Boolean {

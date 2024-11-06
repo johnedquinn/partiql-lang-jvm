@@ -56,4 +56,17 @@ internal class RexSelectImpl(input: Rel, constructor: Rex) : RexSelect {
         result = 31 * result + _constructor.hashCode()
         return result
     }
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "input" to _input.debugString(),
+            "constructor" to _constructor.debugString(),
+            "type" to _type.toString()
+        )
+    }
+
+    override fun toString(): String {
+        return "RexSelectImpl(input=$_input, constructor=$_constructor, type=$_type)"
+    }
 }

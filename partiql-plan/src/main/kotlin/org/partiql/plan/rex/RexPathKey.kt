@@ -31,4 +31,17 @@ internal class RexPathKeyImpl(operand: Rex, key: Rex, type: RexType) : RexPathKe
     override fun getType(): RexType = _type
 
     override fun getChildren(): Collection<Rex> = listOf(_operand, _key)
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "operand" to _operand.debugString(),
+            "key" to _key.debugString(),
+            "type" to _type.toString()
+        )
+    }
+
+    override fun toString(): String {
+        return "RexPathKey(operand=$_operand, key=$_key, type=$_type)"
+    }
 }

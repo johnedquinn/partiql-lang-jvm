@@ -31,4 +31,17 @@ internal class RexPathSymbolImpl(operand: Rex, symbol: String, type: RexType) : 
     override fun getType(): RexType = _type
 
     override fun getChildren(): Collection<Rex> = listOf(_operand)
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "operand" to _operand.debugString(),
+            "symbol" to _symbol,
+            "type" to _type.toString()
+        )
+    }
+
+    override fun toString(): String {
+        return "RexPathSymbol(operand=$_operand, symbol=$_symbol, type=$_type)"
+    }
 }
