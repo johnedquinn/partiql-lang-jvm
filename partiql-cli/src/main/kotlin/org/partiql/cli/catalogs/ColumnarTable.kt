@@ -30,7 +30,7 @@ class ColumnarTable(
     }
 
     override fun getRecordSet(): RecordSet {
-        return ColumnarRecordSet(getDataIterable(_rowCount, _colCount))
+        return ParquetRecordSet("file_cols_20_rows_100000.arrow")
     }
 
     private class DatumBag(val data: Iterable<List<Datum>>) : Iterable<Datum> {
@@ -44,7 +44,7 @@ class ColumnarTable(
                 override fun next(): Datum {
                     val fieldList = dataIter.next()
                     val fields = fieldList.mapIndexed { idx, it ->
-                        val name = (idx + 97).toChar().toString()
+                        val name = idx.toString()
                         org.partiql.spi.value.Field.of(name, it)
                     }
                     return Datum.struct(fields)
@@ -65,9 +65,7 @@ class ColumnarTable(
         return PType.bag(
             PType.row(
                 List(colCount) { colIndex ->
-                    val alphaIndex = colIndex + 97
-                    val char = alphaIndex.toChar()
-                    Field.of(char.toString(), PType.string())
+                    Field.of(colIndex.toString(), PType.string())
                 }
             )
         )
@@ -133,21 +131,6 @@ class ColumnarTable(
 
         override fun indexOf(element: Datum): Int {
             TODO("Not yet implemented")
-        }
-    }
-
-    private class DatumIterator(val iter: Iterator<List<Datum>>): Iterator<Datum> {
-        override fun hasNext(): Boolean {
-            return iter.hasNext()
-        }
-
-        override fun next(): Datum {
-            val elements = iter.next()
-            val fields = elements.mapIndexed { index, value ->
-                val alphaIndex = index + 97
-                org.partiql.spi.value.Field.of((alphaIndex.toChar()).toString(), value)
-            }
-            return Datum.struct(fields)
         }
     }
 }

@@ -20,7 +20,8 @@ internal class Pipeline private constructor(
     private val planner: PartiQLPlanner,
     private val compiler: PartiQLCompiler,
     private val ctx: Context,
-    private val mode: Mode
+    private val mode: Mode,
+    private val optimize: Boolean,
 ) {
 
     /**
@@ -34,8 +35,7 @@ internal class Pipeline private constructor(
         println("Plan:")
         printPlan(plan)
         val optimizedPlan = try {
-            val optimize = false
-            val op = when (optimize) {
+            when (optimize) {
                 true -> {
                     println("Optimized Plan:")
                     val optimized = optimize(plan)
@@ -44,7 +44,6 @@ internal class Pipeline private constructor(
                 }
                 false -> plan
             }
-            op
         } catch (t: Throwable) {
             println("COULD NOT OPTIMIZE PLAN")
             t.printStackTrace()
@@ -110,7 +109,7 @@ internal class Pipeline private constructor(
             val parser = PartiQLParser.Builder().build()
             val planner = PartiQLPlanner.builder().build()
             val compiler = PartiQLCompiler.builder().build()
-            return Pipeline(parser, planner, compiler, ctx, mode)
+            return Pipeline(parser, planner, compiler, ctx, mode, config.optimize)
         }
 
         private fun printPlan(plan: PlanNode) {
@@ -153,6 +152,7 @@ internal class Pipeline private constructor(
                     is List<*> -> {
                         this.printPlan(elt, indent + 1)
                     }
+                    else -> this.appendLine("$elt")
                 }
             }
             indent(indent)
@@ -177,7 +177,8 @@ internal class Pipeline private constructor(
     class Config(
         private val maxErrors: Int,
         private val inhibitWarnings: Boolean,
-        private val warningsAsErrors: Array<ErrorCodeString>
+        private val warningsAsErrors: Array<ErrorCodeString>,
+        val optimize: Boolean,
     ) {
         fun getErrorListener(out: PrintStream): AppPErrorListener {
             return AppPErrorListener(out, maxErrors, inhibitWarnings, warningsAsErrors)
