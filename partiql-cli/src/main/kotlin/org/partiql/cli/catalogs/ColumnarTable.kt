@@ -35,7 +35,21 @@ class ColumnarTable(
 
     private class DatumBag(val data: Iterable<List<Datum>>) : Iterable<Datum> {
         override fun iterator(): Iterator<Datum> {
-            return DatumIterator(data.iterator())
+            val dataIter = data.iterator()
+            return object : Iterator<Datum> {
+                override fun hasNext(): Boolean {
+                    return dataIter.hasNext()
+                }
+
+                override fun next(): Datum {
+                    val fieldList = dataIter.next()
+                    val fields = fieldList.mapIndexed { idx, it ->
+                        val name = (idx + 97).toChar().toString()
+                        org.partiql.spi.value.Field.of(name, it)
+                    }
+                    return Datum.struct(fields)
+                }
+            }
         }
     }
 

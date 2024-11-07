@@ -34,7 +34,7 @@ internal class Pipeline private constructor(
         println("Plan:")
         printPlan(plan)
         val optimizedPlan = try {
-            val optimize = true
+            val optimize = false
             val op = when (optimize) {
                 true -> {
                     println("Optimized Plan:")
