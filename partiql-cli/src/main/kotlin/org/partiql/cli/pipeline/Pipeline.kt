@@ -34,9 +34,16 @@ internal class Pipeline private constructor(
         println("Plan:")
         printPlan(plan)
         val optimizedPlan = try {
-            val op = optimize(plan)
-            println("Optimized Plan:")
-            printPlan(op)
+            val optimize = true
+            val op = when (optimize) {
+                true -> {
+                    println("Optimized Plan:")
+                    val optimized = optimize(plan)
+                    printPlan(optimized)
+                    optimized
+                }
+                false -> plan
+            }
             op
         } catch (t: Throwable) {
             println("COULD NOT OPTIMIZE PLAN")

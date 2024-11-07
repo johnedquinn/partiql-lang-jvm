@@ -128,9 +128,9 @@ class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
     }
 
     override fun visitVar(rex: RexVar, ctx: Ctx): Rex {
-        potentiallyAdd(rex, rex) // TODO: Need to handle scenarios in which we project out the row/struct completely.
+        // potentiallyAdd(rex, rex) // TODO: Need to handle scenarios in which we project out the row/struct completely.
         if (!ctx.isInPath && rex.getDepth() == 0) { // TODO: Only handle single depths rn
-            potentiallyAdd(rex, rex)
+            potentiallyAdd(rex, rex) // TODO
             projectsAll.add(rex.getOffset()) // TODO: Think about
         }
         return rex
@@ -163,11 +163,13 @@ class ProjectionPushdown : Visitor<PlanNode, ProjectionPushdown.Ctx> {
             val table = input.getTable()
             val type = table.getSchema()
             val recordScan = table.getFlags() and Table.ALLOWS_RECORD_SCAN
-            if (recordScan == Table.ALLOWS_RECORD_SCAN && type.kind == PType.Kind.ROW) {
+            val isRecordScan = recordScan == Table.ALLOWS_RECORD_SCAN
+            val isCollectionOfRows = (type.kind == PType.Kind.BAG || type.kind == PType.Kind.ARRAY) && (type.typeParameter.kind == PType.Kind.ROW)
+            if (isRecordScan && isCollectionOfRows) {
                 val columnIndexes = projections[0]!!.map { proj ->
                     when (proj) {
-                        is RexPathKey -> getIndexOfPathKey(type, proj) ?: return null
-                        is RexPathSymbol -> getIndexOfPathSymbol(type, proj) ?: return null
+                        is RexPathKey -> getIndexOfPathKey(type.typeParameter, proj) ?: return null
+                        is RexPathSymbol -> getIndexOfPathSymbol(type.typeParameter, proj) ?: return null
                         else -> return null
                     }
                 }
