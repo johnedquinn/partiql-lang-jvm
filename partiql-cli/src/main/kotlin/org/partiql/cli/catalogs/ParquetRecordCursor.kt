@@ -8,27 +8,31 @@ import org.partiql.spi.value.Datum
 class ParquetRecordCursor(
     private val reader: ArrowStreamReader
 ) : RecordCursor {
-    private var row = 0
+    private var row = -1
     private var rowMax = 0
     private var needsNewBatch = true
     private val root = reader.vectorSchemaRoot
     val colSize = root.schema.fields.size
 
     override fun getDatum(field: Int): Datum {
-        return Datum.integer((root.getVector(field) as IntVector).get(row))
+        return try {
+            Datum.integer((root.getVector(field) as IntVector).get(row))
+        } catch (t: Throwable) {
+            throw IllegalStateException("field: $field row: $row, rowMax: $rowMax", t)
+        }
     }
 
     override fun next(): Boolean {
-        row++
         if (needsNewBatch) {
             val loaded = reader.loadNextBatch()
             if (!loaded) {
                 return false
             }
             rowMax = root.rowCount
-            row = 0
+            row = -1
             needsNewBatch = false
         }
-        return true
+        row++
+        return row < rowMax
     }
 }

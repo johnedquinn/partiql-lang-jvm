@@ -56,7 +56,7 @@ public class DatumTextWriter(
             PType.Kind.BOOL -> TODO()
             PType.Kind.TINYINT -> TODO()
             PType.Kind.SMALLINT -> TODO()
-            PType.Kind.INTEGER -> TODO()
+            PType.Kind.INTEGER -> visitInt(datum, format)
             PType.Kind.BIGINT -> TODO()
             PType.Kind.NUMERIC -> TODO()
             PType.Kind.DECIMAL -> TODO()
@@ -95,6 +95,10 @@ public class DatumTextWriter(
         out.append("\"")
         out.append(datum.string)
         out.append("\"")
+    }
+
+    private fun visitInt(datum: Datum, format: Format?) {
+        out.append(datum.int.toString())
     }
 
     private fun visitRow(datum: Datum, format: Format?) {

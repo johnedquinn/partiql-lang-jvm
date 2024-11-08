@@ -272,13 +272,24 @@ internal class Shell(
                                 out.error()
                             }
                             continue
+                        } catch (t: Throwable) {
+                            out.error()
+                            out.error(t.stackTraceToString())
+                            out.error()
+                            continue
                         }
                         out.appendLine()
                         out.info("=== RESULT ===")
                         val currentTimeInMillis = System.currentTimeMillis()
                         out.info("== Start Time: $currentTimeInMillis")
                         val writer = DatumTextWriter(out)
-                        writer.append(result)
+                        try {
+                            writer.append(result)
+                        } catch (t: Throwable) {
+                            out.error()
+                            out.error(t.stackTraceToString())
+                            out.error()
+                        }
                         val endTime = System.currentTimeMillis()
                         out.info("== End Time: $endTime")
                         val totalTime = endTime - currentTimeInMillis
@@ -289,8 +300,8 @@ internal class Shell(
                         out.success("OK!")
                     }
                 }
-            } catch (ex: Exception) {
-                out.error(ex.stackTraceToString())
+            } catch (t: Throwable) {
+                out.error(t.stackTraceToString())
             }
         }
 

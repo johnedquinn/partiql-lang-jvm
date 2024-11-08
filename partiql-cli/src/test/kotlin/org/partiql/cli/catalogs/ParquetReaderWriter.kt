@@ -19,9 +19,9 @@ import java.io.IOException
 
 class ParquetReaderWriter {
 
-    val rowCount: Int = 100_000
+    val rowCount: Int = 1_000_000
     val rowIndices = (0 until rowCount)
-    val colCount: Int = 20
+    val colCount: Int = 1_000
     val colIndices = (0 until colCount)
     val colName: (Int) -> String = { "col$it" }
     val fileName = "file_cols_${colCount}_rows_$rowCount.arrow"
