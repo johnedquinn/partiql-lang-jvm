@@ -13,6 +13,7 @@ import org.partiql.plan.rel.RelLimit
 import org.partiql.plan.rel.RelOffset
 import org.partiql.plan.rel.RelProject
 import org.partiql.plan.rel.RelScan
+import org.partiql.plan.rel.RelScanTable
 import org.partiql.plan.rel.RelSort
 import org.partiql.plan.rel.RelUnion
 import org.partiql.plan.rel.RelUnpivot
@@ -57,7 +58,13 @@ public interface Visitor<R, C> {
 
     public fun defaultReturn(operator: Operator, ctx: C): R
 
-    public fun visit(operator: Operator, ctx: C): R = operator.accept(this, ctx)
+    public fun visit(node: PlanNode, ctx: C): R = node.accept(this, ctx)
+
+    public fun visitPlan(node: Plan, ctx: C): R = node.accept(this, ctx)
+
+    public fun visitQuery(node: Operation.Query, ctx: C): R = node.accept(this, ctx)
+
+    public fun visitAggregateCall(node: AggregateCall, ctx: C): R = node.accept(this, ctx)
 
     // --[Rel]-----------------------------------------------------------------------------------------------------------
 
@@ -86,6 +93,8 @@ public interface Visitor<R, C> {
     public fun visitProject(rel: RelProject, ctx: C): R = defaultVisit(rel, ctx)
 
     public fun visitScan(rel: RelScan, ctx: C): R = defaultVisit(rel, ctx)
+
+    public fun visitScanTable(rel: RelScanTable, ctx: C): R = defaultVisit(rel, ctx)
 
     public fun visitSort(rel: RelSort, ctx: C): R = defaultVisit(rel, ctx)
 

@@ -15,6 +15,7 @@
 
 package org.partiql.cli
 
+import org.partiql.cli.catalogs.ColumnarCatalog
 import org.partiql.cli.io.Format
 import org.partiql.cli.pipeline.Pipeline
 import org.partiql.cli.shell.Shell
@@ -153,6 +154,42 @@ internal class MainCommand : Runnable {
     )
     var files: Array<File>? = null
 
+    @CommandLine.Option(
+        names = ["--optimize"],
+        arity = "0..1",
+        description = [
+            "Adds projection push-down optimization."
+        ],
+        paramLabel = "<boolean>",
+        help = true,
+        defaultValue = "false"
+    )
+    var optimize: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--col-count"],
+        arity = "0..1",
+        description = [
+            "Specifies the number of columns in a table"
+        ],
+        paramLabel = "<column count>",
+        help = true,
+        defaultValue = "10"
+    )
+    var colCount: Int = 10
+
+    @CommandLine.Option(
+        names = ["--row-count"],
+        arity = "0..1",
+        description = [
+            "Specifies the number of rows in a table"
+        ],
+        paramLabel = "<row count>",
+        help = true,
+        defaultValue = "1000"
+    )
+    var rowCount: Long = 1_000
+
     /**
      * Run the CLI or Shell (default).
      */
@@ -165,7 +202,7 @@ internal class MainCommand : Runnable {
 
     private fun getPipelineConfig(): Pipeline.Config {
         warningsAsErrors = if (this::warningsAsErrors.isInitialized) warningsAsErrors else emptyArray()
-        return Pipeline.Config(maxErrors!!, inhibitWarnings, warningsAsErrors)
+        return Pipeline.Config(maxErrors!!, inhibitWarnings, warningsAsErrors, optimize)
     }
 
     /**
@@ -253,7 +290,7 @@ internal class MainCommand : Runnable {
                 )
             )
             .build()
-        return listOf(catalog)
+        return listOf(catalog, ColumnarCatalog("columnar", rowCount, colCount))
     }
 
     /**
@@ -262,9 +299,10 @@ internal class MainCommand : Runnable {
      */
     private fun DatumReader.readAll(): List<Datum> {
         val values = mutableListOf<Datum>()
-        val next = next()
+        var next = next()
         while (next != null) {
             values.add(next)
+            next = next()
         }
         return values
     }
@@ -275,10 +313,16 @@ internal class MainCommand : Runnable {
     private fun stream(): InputStream? {
         val streams: MutableList<InputStream> = mutableListOf()
         if (program?.second != null) {
+            println(program)
             streams.add(program!!.second!!.inputStream())
         }
         if (files != null) {
-            streams.addAll(files!!.map { it.inputStream() })
+            streams.addAll(
+                files!!.map {
+                    println(it.absolutePath)
+                    it.inputStream()
+                }
+            )
         }
         if (streams.isEmpty() && System.`in`.available() != 0) {
             streams.add(System.`in`)

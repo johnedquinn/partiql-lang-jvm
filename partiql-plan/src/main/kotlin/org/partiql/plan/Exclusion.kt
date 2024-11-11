@@ -5,7 +5,7 @@ import org.partiql.plan.rex.RexVar
 /**
  * An [Exclusion] is represented as a tree of the subsumed (combined) exclusion paths.
  */
-public class Exclusion(variable: RexVar, items: List<Item>) {
+public class Exclusion(variable: RexVar, items: List<Item>) : PlanNode {
 
     // PRIVATE VAR
     private var _variable: RexVar = variable
@@ -50,6 +50,10 @@ public class Exclusion(variable: RexVar, items: List<Item>) {
         var result = _variable.hashCode()
         result = 31 * result + _items.hashCode()
         return result
+    }
+
+    override fun <R : Any?, C : Any?> accept(visitor: Visitor<R, C>?, ctx: C): R {
+        TODO("Not yet implemented")
     }
 
     /**

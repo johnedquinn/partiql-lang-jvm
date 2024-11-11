@@ -3,6 +3,7 @@ package org.partiql.planner.internal
 import org.partiql.ast.v1.Statement
 import org.partiql.plan.Operation
 import org.partiql.plan.Plan
+import org.partiql.plan.Visitor
 import org.partiql.plan.builder.PlanFactory
 import org.partiql.plan.rex.Rex
 import org.partiql.planner.PartiQLPlanner
@@ -59,15 +60,8 @@ internal class SqlPlanner(
         } catch (t: Throwable) {
             val error = PError.INTERNAL_ERROR(PErrorKind.SEMANTIC(), null, t)
             ctx.errorListener.report(error)
-            val plan = object : Plan {
-                override fun getOperation(): Operation {
-                    return object : Operation.Query {
-                        override fun getRex(): Rex {
-                            return PlanFactory.STANDARD.rexError(PType.dynamic())
-                        }
-                    }
-                }
-            }
+            val factory = PlanFactory.STANDARD
+            val plan = factory.plan(factory.query(factory.rexError(PType.dynamic())))
             return PartiQLPlanner.Result(plan)
         }
     }

@@ -18,7 +18,6 @@ internal class ExprSelect(
     private val ordered: Boolean,
 ) : ExprValue {
 
-    @OptIn(PartiQLValueExperimental::class)
     class Elements(
         private val input: ExprRelation,
         private val constructor: ExprValue,

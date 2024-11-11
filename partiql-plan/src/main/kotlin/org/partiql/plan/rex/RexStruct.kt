@@ -60,5 +60,14 @@ internal class RexStructImpl(fields: List<RexStruct.Field>, type: RexType) : Rex
         return true
     }
 
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "keys" to _fields.map { it.getKey().debugString() },
+            "values" to _fields.map { it.getValue().debugString() },
+            // TODO "type" to getType()
+        )
+    }
+
     override fun hashCode(): Int = _fields.hashCode()
 }

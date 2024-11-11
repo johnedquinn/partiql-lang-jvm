@@ -10,3 +10,7 @@ public interface Version {
      */
     override fun toString(): String
 }
+
+internal class VersionImpl(private val version: String) : Version {
+    override fun toString(): String = version
+}

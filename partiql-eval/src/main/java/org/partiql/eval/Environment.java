@@ -61,7 +61,7 @@ public class Environment {
         try {
             return stack[depth].values[offset];
         } catch (IndexOutOfBoundsException ex) {
-            throw new RuntimeException("Invalid variable reference [$depth:$offset]\n$this");
+            throw new RuntimeException("Invalid variable reference [" + depth + ":" + offset +"]\n" + this);
         }
     }
 

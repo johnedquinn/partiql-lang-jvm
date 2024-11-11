@@ -16,6 +16,7 @@ package org.partiql.plugins.local
 
 import com.amazon.ion.system.IonReaderBuilder
 import com.amazon.ionelement.api.loadSingleElement
+import org.partiql.spi.RecordSet
 import org.partiql.spi.catalog.Name
 import org.partiql.spi.catalog.Table
 import org.partiql.spi.value.Datum
@@ -48,4 +49,8 @@ internal class LocalTable(
 
     // TODO for now files are `type` only.
     override fun getDatum(): Datum = Datum.nullValue()
+
+    override fun getRecordSet(): RecordSet {
+        TODO("Not yet implemented")
+    }
 }

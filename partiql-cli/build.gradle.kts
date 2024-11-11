@@ -27,6 +27,8 @@ dependencies {
     implementation(project(":partiql-types"))
     implementation(project(":partiql-spi"))
     implementation(project(":plugins:partiql-local"))
+    implementation("org.apache.parquet:parquet-arrow:1.14.3")
+    implementation("org.apache.arrow:arrow-memory-unsafe:18.0.0")
     implementation(Deps.csv)
     implementation(Deps.awsSdkBom)
     implementation(Deps.awsSdkDynamodb)
@@ -43,6 +45,7 @@ dependencies {
 application {
     applicationName = "partiql"
     mainClass.set("org.partiql.cli.Main")
+    applicationDefaultJvmArgs = listOf("--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED")
 }
 
 distributions {

@@ -40,4 +40,32 @@ internal class RexCallImpl(function: Function.Instance, args: List<Rex>) : RexCa
     override fun getType(): RexType = _type
 
     override fun getChildren(): Collection<Rex> = _args
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "function" to _function,
+            "args" to _args.map { it.debugString() },
+            "type" to _type.toString()
+        )
+    }
+
+    override fun toString(): String {
+        val sb = StringBuilder()
+        sb.append("RexCall(")
+        sb.append("instance=")
+        sb.append(_function.toString())
+        sb.append(", args=")
+        sb.append('(')
+        _args.forEachIndexed { i, arg ->
+            sb.append(arg)
+            if (i < _args.size - 1) {
+                sb.append(", ")
+            }
+        }
+        sb.append(')')
+        sb.append(')')
+        return sb.toString()
+        return super.toString()
+    }
 }

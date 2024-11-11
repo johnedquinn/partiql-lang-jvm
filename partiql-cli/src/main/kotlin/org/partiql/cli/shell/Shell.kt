@@ -32,7 +32,7 @@ import org.joda.time.Duration
 import org.partiql.cli.pipeline.Pipeline
 import org.partiql.spi.catalog.Session
 import org.partiql.value.PartiQLValueExperimental
-import org.partiql.value.io.PartiQLValueTextWriter
+import org.partiql.value.io.DatumTextWriter
 import java.io.Closeable
 import java.io.PrintStream
 import java.nio.file.Path
@@ -272,18 +272,36 @@ internal class Shell(
                                 out.error()
                             }
                             continue
+                        } catch (t: Throwable) {
+                            out.error()
+                            out.error(t.stackTraceToString())
+                            out.error()
+                            continue
                         }
                         out.appendLine()
                         out.info("=== RESULT ===")
-                        val writer = PartiQLValueTextWriter(out)
-                        writer.append(result.toPartiQLValue()) // TODO: Create a Datum writer
+                        val currentTimeInMillis = System.currentTimeMillis()
+                        out.info("== Start Time: $currentTimeInMillis")
+                        val writer = DatumTextWriter(out)
+                        try {
+                            writer.append(result)
+                        } catch (t: Throwable) {
+                            out.error()
+                            out.error(t.stackTraceToString())
+                            out.error()
+                        }
+                        val endTime = System.currentTimeMillis()
+                        out.info("== End Time: $endTime")
+                        val totalTime = endTime - currentTimeInMillis
+                        out.appendLine()
+                        out.info("== $totalTime ms ===")
                         out.appendLine()
                         out.appendLine()
                         out.success("OK!")
                     }
                 }
-            } catch (ex: Exception) {
-                out.error(ex.stackTraceToString())
+            } catch (t: Throwable) {
+                out.error(t.stackTraceToString())
             }
         }
 

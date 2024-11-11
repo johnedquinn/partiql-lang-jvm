@@ -1,5 +1,6 @@
 package org.partiql.spi.catalog
 
+import org.partiql.spi.RecordSet
 import org.partiql.spi.catalog.impl.StandardTable
 import org.partiql.spi.value.Datum
 import org.partiql.types.PType
@@ -14,6 +15,13 @@ public interface Table {
      */
     public fun getName(): Name
 
+    public fun getFlags(): Int {
+        if (getSchema().kind == PType.Kind.ROW) {
+            return (ALLOWS_RECORD_SCAN and ALLOWS_VALUE_SCAN)
+        }
+        return ALLOWS_VALUE_SCAN
+    }
+
     /**
      * The table's schema.
      */
@@ -23,6 +31,11 @@ public interface Table {
      * The table's data.
      */
     public fun getDatum(): Datum = Datum.nullValue()
+
+    /**
+     * Applicable if [getFlags] returns [ALLOWS_RECORD_SCAN]
+     */
+    public fun getRecordSet(): RecordSet
 
     /**
      * Factory methods and builder.
@@ -88,6 +101,15 @@ public interface Table {
          */
         @JvmStatic
         public fun builder(): Builder = Builder()
+
+        @JvmStatic
+        public val ALLOWS_VALUE_SCAN: Int = 1
+
+        @JvmStatic
+        public val ALLOWS_RECORD_SCAN: Int = 2
+
+        @JvmStatic
+        public val ALLOWS_KEY_SCAN: Int = 3
     }
 
     /**

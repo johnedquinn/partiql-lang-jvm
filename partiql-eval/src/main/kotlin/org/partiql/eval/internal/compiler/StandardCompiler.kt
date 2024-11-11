@@ -27,6 +27,7 @@ import org.partiql.eval.internal.operator.rel.RelOpOffset
 import org.partiql.eval.internal.operator.rel.RelOpProject
 import org.partiql.eval.internal.operator.rel.RelOpScan
 import org.partiql.eval.internal.operator.rel.RelOpScanPermissive
+import org.partiql.eval.internal.operator.rel.RelOpScanTable
 import org.partiql.eval.internal.operator.rel.RelOpSort
 import org.partiql.eval.internal.operator.rel.RelOpUnionAll
 import org.partiql.eval.internal.operator.rel.RelOpUnionDistinct
@@ -75,6 +76,7 @@ import org.partiql.plan.rel.RelLimit
 import org.partiql.plan.rel.RelOffset
 import org.partiql.plan.rel.RelProject
 import org.partiql.plan.rel.RelScan
+import org.partiql.plan.rel.RelScanTable
 import org.partiql.plan.rel.RelSort
 import org.partiql.plan.rel.RelUnion
 import org.partiql.plan.rel.RelUnpivot
@@ -268,6 +270,10 @@ internal class StandardCompiler : PartiQLCompiler {
                 Mode.STRICT -> RelOpScan(input)
                 else -> throw IllegalStateException("Unsupported execution mode: $mode")
             }
+        }
+
+        override fun visitScanTable(rel: RelScanTable, ctx: Unit): ExprRelation {
+            return RelOpScanTable(rel.getTable().getTable(), rel.getColumns())
         }
 
         override fun visitSort(rel: RelSort, ctx: Unit): ExprRelation {

@@ -53,4 +53,17 @@ internal class RexVarImpl(depth: Int, offset: Int, type: RexType) : RexVar {
         result = 31 * result + _offset
         return result
     }
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "depth" to _depth,
+            "offset" to _offset,
+            "type" to _type.toString()
+        )
+    }
+
+    override fun toString(): String {
+        return "RexVarImpl(_depth=$_depth, _offset=$_offset, _type=$_type)"
+    }
 }

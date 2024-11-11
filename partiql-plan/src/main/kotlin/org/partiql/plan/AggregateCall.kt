@@ -8,7 +8,7 @@ import org.partiql.spi.function.Aggregation
  *
  * TODO this does not need to be an interface.
  */
-public interface AggregateCall {
+public interface AggregateCall : PlanNode {
 
     public fun getAgg(): Aggregation
 
@@ -34,4 +34,7 @@ internal class RelAggregateCallImpl(
     override fun getAgg(): Aggregation = agg
     override fun getArgs(): List<Rex> = args
     override fun isDistinct(): Boolean = isDistinct
+    override fun <R : Any?, C : Any?> accept(visitor: Visitor<R, C>, ctx: C): R {
+        return visitor.visitAggregateCall(this, ctx)
+    }
 }

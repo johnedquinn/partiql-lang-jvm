@@ -40,4 +40,16 @@ internal class RelScanImpl(input: Rex) : RelScan {
     override fun hashCode(): Int {
         return _input.hashCode()
     }
+
+    override fun debugString(): MutableMap<String, Any> {
+        return mutableMapOf(
+            "name" to this::class.java.name,
+            "input" to _input.debugString(),
+            // TODO "type" to getType()
+        )
+    }
+
+    override fun toString(): String {
+        return  "RelScanImpl(_input=$_input)"
+    }
 }
