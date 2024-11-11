@@ -45,6 +45,7 @@ dependencies {
 application {
     applicationName = "partiql"
     mainClass.set("org.partiql.cli.Main")
+    applicationDefaultJvmArgs = listOf("--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED")
 }
 
 distributions {

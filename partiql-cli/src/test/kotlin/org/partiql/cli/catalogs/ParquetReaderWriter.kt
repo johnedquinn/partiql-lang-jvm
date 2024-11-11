@@ -10,6 +10,7 @@ import org.apache.arrow.vector.types.pojo.ArrowType
 import org.apache.arrow.vector.types.pojo.Field
 import org.apache.arrow.vector.types.pojo.FieldType
 import org.apache.arrow.vector.types.pojo.Schema
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -19,13 +20,14 @@ import java.io.IOException
 
 class ParquetReaderWriter {
 
-    val rowCount: Int = 1_000_000
+    val rowCount: Int = 50_000_000
     val rowIndices = (0 until rowCount)
-    val colCount: Int = 1_000
+    val colCount: Int = 20
     val colIndices = (0 until colCount)
     val colName: (Int) -> String = { "col$it" }
     val fileName = "file_cols_${colCount}_rows_$rowCount.arrow"
 
+    @Disabled("This is to create parquet files.")
     @Test
     fun write() {
         RootAllocator().use { rootAllocator ->

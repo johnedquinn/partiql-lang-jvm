@@ -48,6 +48,13 @@ class ColumnarCatalog(private val catName: String, private val rowCount: Long, p
                     1000
                 )
             }
+            "t6" -> {
+                return ColumnarTable(
+                    "t5",
+                    "/Users/johqunn/Development/partiql-lang-jvm/partiql-cli/file_cols_20_rows_50000000.arrow",
+                    1000
+                )
+            }
         }
         return null
     }
