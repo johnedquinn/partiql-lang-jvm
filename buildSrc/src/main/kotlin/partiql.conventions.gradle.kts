@@ -48,6 +48,10 @@ dependencies {
     }
 }
 
+kotlin {
+    jvmToolchain(8)
+}
+
 java {
     sourceCompatibility = JavaVersion.toVersion(Versions.jvmTarget)
     targetCompatibility = JavaVersion.toVersion(Versions.jvmTarget)

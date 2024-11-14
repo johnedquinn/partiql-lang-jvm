@@ -21,6 +21,7 @@ plugins {
     id(Plugins.library)
     id(Plugins.publish)
     id(Plugins.kotlinLombok) version Versions.kotlinLombok
+    id(Plugins.jmh) version Versions.jmhGradlePlugin
 }
 
 dependencies {

@@ -34,3 +34,5 @@ include(
     "test:sprout-tests",
     "examples",
 )
+include("test:eval-benchmarks")
+findProject(":test:eval-benchmarks")?.name = "eval-benchmarks"
