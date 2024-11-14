@@ -37,6 +37,8 @@ class OpArithmeticTest : PartiQLTyperTestBase() {
                 val arg1 = args[1]
                 val output = when {
                     arg0 == arg1 -> arg1
+                    arg0 == StaticType.DECIMAL && arg1 == StaticType.FLOAT -> arg1 // TODO: The cast table is wrong. Honestly, it should be deleted.
+                    arg1 == StaticType.DECIMAL && arg0 == StaticType.FLOAT -> arg0 // TODO: The cast table is wrong
                     castTable(arg1, arg0) == CastType.COERCION -> arg0
                     castTable(arg0, arg1) == CastType.COERCION -> arg1
                     else -> error("Arguments do not conform to parameters. Args: $args")

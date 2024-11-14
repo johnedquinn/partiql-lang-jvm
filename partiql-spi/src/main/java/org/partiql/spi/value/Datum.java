@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.partiql.errors.DataException;
 import org.partiql.types.PType;
+import org.partiql.value.DecimalValue;
 import org.partiql.value.PartiQL;
 import org.partiql.value.PartiQLValue;
 import org.partiql.value.PartiQLValueType;
@@ -513,7 +514,8 @@ public interface Datum extends Iterable<Datum> {
                 return new DatumDouble(Objects.requireNonNull(FLOAT64Value.getValue()));
             case DECIMAL:
                 org.partiql.value.DecimalValue DECIMALValue = (org.partiql.value.DecimalValue) value;
-                return new DatumDecimal(Objects.requireNonNull(DECIMALValue.getValue()), PType.decimal());
+                BigDecimal bigDecimal = Objects.requireNonNull(DECIMALValue.getValue());
+                return Datum.decimal(bigDecimal, bigDecimal.precision(), bigDecimal.scale());
             case CHAR:
                 org.partiql.value.CharValue CHARValue = (org.partiql.value.CharValue) value;
                 String charString = Objects.requireNonNull(CHARValue.getValue()).toString();
@@ -531,7 +533,8 @@ public interface Datum extends Iterable<Datum> {
                 throw new UnsupportedOperationException();
             case DECIMAL_ARBITRARY:
                 org.partiql.value.DecimalValue DECIMAL_ARBITRARYValue = (org.partiql.value.DecimalValue) value;
-                return new DatumDecimal(Objects.requireNonNull(DECIMAL_ARBITRARYValue.getValue()), PType.decimal());
+                BigDecimal bigDecimal2 = Objects.requireNonNull(DECIMAL_ARBITRARYValue.getValue());
+                return Datum.decimal(bigDecimal2, bigDecimal2.precision(), bigDecimal2.scale());
             case ANY:
             default:
                 throw new NotImplementedError();

@@ -86,7 +86,9 @@ import org.partiql.planner.internal.typer.CompilerType
 import org.partiql.planner.internal.typer.PlanTyper.Companion.toCType
 import org.partiql.spi.catalog.Identifier
 import org.partiql.types.PType
+import org.partiql.value.DecimalValue
 import org.partiql.value.MissingValue
+import org.partiql.value.PartiQLValue
 import org.partiql.value.PartiQLValueExperimental
 import org.partiql.value.StringValue
 import org.partiql.value.boolValue
@@ -126,12 +128,24 @@ internal object RexConverter {
 
         override fun visitExprLit(node: ExprLit, context: Env): Rex {
             val type = CompilerType(
-                _delegate = node.value.type.toPType(),
+                _delegate = node.value.toPType(),
                 isNullValue = node.value.isNull,
                 isMissingValue = node.value is MissingValue
             )
             val op = rexOpLit(node.value)
             return rex(type, op)
+        }
+
+        private fun PartiQLValue.toPType(): PType {
+            if (this.isNull) {
+                return this.type.toPType()
+            }
+            return when (this) {
+                is DecimalValue -> {
+                    PType.decimal(this.value!!.precision(), this.value!!.scale())
+                }
+                else -> this.type.toPType()
+            }
         }
 
         /**

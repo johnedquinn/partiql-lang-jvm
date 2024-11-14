@@ -870,7 +870,7 @@ internal class PlanTyperTestsPorted {
                     StructType(
                         fields = mapOf(
                             "a" to StaticType.INT4,
-                            "b" to StaticType.DECIMAL,
+                            "b" to DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1)),
                         ),
                         contentClosed = true,
                         constraints = setOf(
@@ -888,7 +888,7 @@ internal class PlanTyperTestsPorted {
                     StructType(
                         fields = mapOf(
                             "a" to StaticType.INT4,
-                            "b" to StaticType.DECIMAL,
+                            "b" to DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1)),
                         ),
                         contentClosed = true,
                         constraints = setOf(
@@ -905,7 +905,7 @@ internal class PlanTyperTestsPorted {
                 expected = BagType(
                     StructType(
                         fields = listOf(
-                            StructType.Field("b", StaticType.DECIMAL),
+                            StructType.Field("b", DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1))),
                             StructType.Field("a", StaticType.INT4),
                         ),
                         contentClosed = true,
@@ -924,7 +924,7 @@ internal class PlanTyperTestsPorted {
                     StructType(
                         fields = listOf(
                             StructType.Field("a", StaticType.INT4),
-                            StructType.Field("a", StaticType.DECIMAL),
+                            StructType.Field("a", DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1))),
                         ),
                         contentClosed = true,
                         constraints = setOf(
@@ -942,7 +942,7 @@ internal class PlanTyperTestsPorted {
                     StructType(
                         fields = listOf(
                             StructType.Field("a", StaticType.INT4),
-                            StructType.Field("a", StaticType.DECIMAL),
+                            StructType.Field("a", DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1))),
                         ),
                         contentClosed = true,
                         constraints = setOf(
@@ -970,7 +970,7 @@ internal class PlanTyperTestsPorted {
                     StructType(
                         fields = listOf(
                             StructType.Field("a", StaticType.INT4),
-                            StructType.Field("a", StaticType.DECIMAL),
+                            StructType.Field("a", DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1))),
                             StructType.Field("a", StaticType.STRING),
                         ),
                         contentClosed = true,
@@ -989,7 +989,7 @@ internal class PlanTyperTestsPorted {
                     StructType(
                         fields = listOf(
                             StructType.Field("a", StaticType.INT4),
-                            StructType.Field("a", StaticType.DECIMAL),
+                            StructType.Field("a", DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1))),
                         ),
                         contentClosed = true,
                         constraints = setOf(
@@ -2777,7 +2777,7 @@ internal class PlanTyperTestsPorted {
             SuccessTestCase(
                 key = PartiQLTest.Key("basics", "case-when-43"),
                 catalog = "pql",
-                expected = StaticType.DECIMAL
+                expected = DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(38, 5)),
             ),
             SuccessTestCase(
                 key = PartiQLTest.Key("basics", "case-when-44"),
@@ -3147,7 +3147,7 @@ internal class PlanTyperTestsPorted {
                 query = """
                     { 'aBc': 1, 'AbC': 2.0 }['AbC'];
                 """,
-                expected = StaticType.DECIMAL
+                expected = DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1)),
             ),
             // This should fail because the Spec says tuple indexing MUST use a literal string or explicit cast.
             ErrorTestCase(
@@ -3315,7 +3315,7 @@ internal class PlanTyperTestsPorted {
                 expected = BagType(
                     StructType(
                         fields = mapOf(
-                            "a" to StaticType.DECIMAL,
+                            "a" to DecimalType(DecimalType.PrecisionScaleConstraint.Constrained(2, 1)),
                             "c" to StaticType.INT8,
                             "s" to StaticType.DECIMAL,
                             "m" to StaticType.DECIMAL,
@@ -3882,6 +3882,10 @@ internal class PlanTyperTestsPorted {
         when (val statement = plan.getOperation()) {
             is org.partiql.plan.Operation.Query -> {
                 assert(collector.problems.isEmpty()) {
+                    // Throw internal error for debugging
+                    collector.problems.firstOrNull { it.code() == PError.INTERNAL_ERROR }?.let { pError ->
+                        pError.getOrNull("CAUSE", Throwable::class.java)?.let { throw it }
+                    }
                     buildString {
                         appendLine(collector.problems.toString())
                         appendLine()

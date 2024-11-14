@@ -8,6 +8,7 @@ import org.partiql.eval.internal.operator.rex.ExprCallDynamic.Candidate
 import org.partiql.eval.internal.operator.rex.ExprCallDynamic.CoercionFamily.DYNAMIC
 import org.partiql.eval.internal.operator.rex.ExprCallDynamic.CoercionFamily.UNKNOWN
 import org.partiql.spi.function.Function
+import org.partiql.spi.function.Parameter
 import org.partiql.spi.value.Datum
 import org.partiql.types.PType
 import org.partiql.value.PartiQLValue
@@ -31,7 +32,7 @@ import org.partiql.value.PartiQLValue
  */
 internal class ExprCallDynamic(
     private val name: String,
-    private val functions: Array<Function.Instance>,
+    private val functions: Array<Function>,
     private val args: Array<ExprValue>
 ) : ExprValue {
 
@@ -48,7 +49,7 @@ internal class ExprCallDynamic(
      *
      * TODO actually make this an array instead of lists.
      */
-    private val paramTypes: List<List<PType>> = functions.map { c -> c.parameters.toList() }
+    private val paramTypes: List<List<Parameter>> = functions.map { c -> c.getParameters().toList() }
 
     /**
      * @property paramFamilies is a two-dimensional array.
@@ -58,7 +59,7 @@ internal class ExprCallDynamic(
      *
      * TODO actually make this an array instead of lists.
      */
-    private val paramFamilies: List<List<CoercionFamily>> = functions.map { c -> c.parameters.map { p -> family(p.kind) } }
+    private val paramFamilies: List<List<CoercionFamily>> = functions.map { c -> c.getParameters().map { p -> family(p.getType().kind) } }
 
     /**
      * A memoization cache for the [match] function.
@@ -92,7 +93,7 @@ internal class ExprCallDynamic(
             for (paramIndex in paramIndices) {
                 val argType = args[paramIndex]
                 val paramType = paramTypes[candidateIndex][paramIndex]
-                if (paramType == argType) { currentExactMatches++ }
+                if (paramType.getMatch(argType) == argType) { currentExactMatches++ }
                 val argFamily = argFamilies[paramIndex]
                 val paramFamily = paramFamilies[candidateIndex][paramIndex]
                 if (paramFamily != argFamily && argFamily != CoercionFamily.UNKNOWN && paramFamily != CoercionFamily.DYNAMIC) { return@forEach }
@@ -102,7 +103,10 @@ internal class ExprCallDynamic(
                 exactMatches = currentExactMatches
             }
         }
-        return if (currentMatch == null) null else Candidate(functions[currentMatch!!])
+        return if (currentMatch == null) null else {
+            val instance = functions[currentMatch!!].getInstance(args.toTypedArray()) ?: return null
+            Candidate(instance)
+        }
     }
 
     /**

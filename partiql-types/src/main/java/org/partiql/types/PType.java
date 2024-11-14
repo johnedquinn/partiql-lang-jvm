@@ -525,12 +525,12 @@ public interface PType {
     }
 
     /**
-     * @return a PartiQL decimal (arbitrary precision/scale) type
+     * @return a PartiQL decimal type
      * @deprecated this API is experimental and is subject to modification/deletion without prior notice.
      */
     @NotNull
     static PType decimal() {
-        return new PTypePrimitive(Kind.DECIMAL_ARBITRARY);
+        return new PTypeDecimal(38, 0);
     }
 
     /**

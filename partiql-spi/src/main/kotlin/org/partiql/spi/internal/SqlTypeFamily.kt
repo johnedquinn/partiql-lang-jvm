@@ -61,7 +61,7 @@ internal class SqlTypeFamily private constructor(
         )
 
         @JvmStatic
-        val NUMERIC = SqlTypeFamily(
+        val NUMBER = SqlTypeFamily(
             preferred = PType.decimal(),
             members = setOf(
                 Kind.TINYINT,
