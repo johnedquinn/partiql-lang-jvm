@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.partiql.eval.Expr;
 import org.partiql.plan.Operator;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,5 +47,13 @@ public class Match {
     @NotNull
     public List<Expr> children(int i) {
         return children.get(i);
+    }
+
+    @Override
+    public String toString() {
+        return "Match{" +
+                "operators=" + Arrays.toString(operators) +
+                ", children=" + children +
+                '}';
     }
 }

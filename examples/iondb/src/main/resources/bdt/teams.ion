@@ -1,0 +1,3 @@
+{ id: 1, name: "PartiQL", username: "partiql", memberCount: 7 }
+{ id: 2, name: "Ion", username: "ion", memberCount: 11 }
+{ id: 3, name: "Ray", username: "ray", memberCount: 12 }

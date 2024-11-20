@@ -1,0 +1,3 @@
+{ id: 1, name: "John Quinn", username: "johnedquinn", age: 25 }
+{ id: 2, name: "George Washington", username: "georgew", age: 51 }
+{ id: 3, name: "Abraham Lincoln", username: "abel", age: 82 }

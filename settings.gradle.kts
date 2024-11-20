@@ -1,3 +1,6 @@
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
+}
 /*
  * Copyright Amazon.com, Inc. or its affiliates.  All rights reserved.
  *
@@ -33,3 +36,5 @@ include(
     "test:sprout-tests",
     "examples",
 )
+include("examples:iondb")
+findProject(":examples:iondb")?.name = "iondb"

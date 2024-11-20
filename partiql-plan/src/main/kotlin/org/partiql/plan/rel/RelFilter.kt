@@ -1,5 +1,6 @@
 package org.partiql.plan.rel
 
+import org.partiql.plan.Operator
 import org.partiql.plan.Visitor
 import org.partiql.plan.rex.Rex
 
@@ -15,7 +16,7 @@ public interface RelFilter : Rel {
 
     public fun getPredicate(): Rex
 
-    override fun getChildren(): Collection<Rel> = listOf(getInput())
+    override fun getChildren(): Collection<Operator> = listOf(getInput(), getPredicate())
 
     override fun getType(): RelType = getInput().getType()
 
@@ -32,15 +33,15 @@ internal class RelFilterImpl(input: Rel, predicate: Rex) : RelFilter {
 
     // DO NOT USE FINAL
     private var _input: Rel = input
-    private var _children: List<Rel>? = null
+    private var _children: List<Operator>? = null
     private var _predicate: Rex = predicate
     private var _ordered: Boolean = input.isOrdered()
 
     override fun getInput(): Rel = _input
 
-    override fun getChildren(): Collection<Rel> {
+    override fun getChildren(): Collection<Operator> {
         if (_children == null) {
-            _children = listOf(_input)
+            _children = listOf(_input, _predicate)
         }
         return _children!!
     }

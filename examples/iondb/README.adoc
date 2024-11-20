@@ -1,0 +1,3 @@
+= IonDB Example
+
+This is an example database that is backed by Ion files.

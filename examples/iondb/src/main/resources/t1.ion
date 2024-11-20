@@ -1,0 +1,6 @@
+{
+  name: t1,
+  type: INT,
+}
+
+(INT 5)
