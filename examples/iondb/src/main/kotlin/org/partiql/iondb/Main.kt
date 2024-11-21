@@ -31,6 +31,7 @@ import java.io.PrintStream
  * 6. Show the anti-filter: SELECT VALUE p.age FROM persons p WHERE p.age > 30
  * 7. Show how warnings get printed: SELECT VALUE 1 + MISSING FROM persons p WHERE p.age > 30
  * 8. Show how the ast rewriter gets invoked: SELECT AVG(p.age) AS avg_age FROM persons p
+ * 9. Grabbing numbers from some table of scalars (not structs): SELECT VALUE n FROM numbers n
  */
 fun main(args: Array<String>) {
 
