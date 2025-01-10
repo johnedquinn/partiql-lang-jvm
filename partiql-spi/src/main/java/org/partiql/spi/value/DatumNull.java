@@ -77,18 +77,8 @@ class DatumNull implements Datum {
 
     @NotNull
     @Override
-    public BigInteger getBigInteger() {
-        if (_type.code() == PType.NUMERIC) {
-            throw new NullPointerException();
-        } else {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    @NotNull
-    @Override
     public BigDecimal getBigDecimal() {
-        if (_type.code() == PType.DECIMAL) {
+        if (_type.code() == PType.DECIMAL || _type.code() == PType.NUMERIC) {
             throw new NullPointerException();
         } else {
             throw new UnsupportedOperationException();

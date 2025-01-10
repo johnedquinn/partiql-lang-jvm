@@ -110,7 +110,7 @@ internal object ValueUtility {
             PType.SMALLINT -> this.short.toInt()
             PType.INTEGER -> this.int
             PType.BIGINT -> this.long.toInt()
-            PType.NUMERIC -> this.bigInteger.toInt()
+            PType.NUMERIC -> this.bigDecimal.toInt()
             else -> throw TypeCheckException()
         }
     }
