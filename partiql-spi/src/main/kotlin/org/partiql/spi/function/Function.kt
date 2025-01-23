@@ -31,7 +31,7 @@ internal object Function {
             .addParameters(parameters.toList())
             .isNullCall(isNullCall)
             .isMissingCall(isMissingCall)
-            .body { invoke.invoke(it) }
+            .body(invoke)
             .build()
     }
 
@@ -57,6 +57,6 @@ internal object Function {
         .addParameters(parameters.toList())
         .isNullCall(isNullCall)
         .isMissingCall(isMissingCall)
-        .body { invoke(it) }
+        .body(invoke)
         .build()
 }

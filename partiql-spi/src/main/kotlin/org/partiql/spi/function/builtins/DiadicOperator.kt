@@ -51,7 +51,7 @@ internal abstract class DiadicOperator(
         val lhs = args[0]
         val rhs = args[1]
         val (newLhs, newRhs) = getOperands(lhs, rhs) ?: return null
-        val instance = instances[newLhs.code()][newRhs.code()]
+        val instance = instances[lhs.code()][rhs.code()]
         return instance(newLhs, newRhs)
     }
 
