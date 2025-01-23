@@ -15,12 +15,12 @@ jobs:
     name: Create conformance report for `push` and `pull_request` events
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           submodules: recursive
       - name: Use Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: 17
@@ -37,6 +37,8 @@ jobs:
       - name: Upload `conformance-test-report` folder
         uses: actions/upload-artifact@v4
         with:
+          name: "conformance-report-${{ github.event.pull_request.head.sha }}"
+          if-no-files-found: error
           path: ${{ env.PATH_TO_TEST_RUNNER }}/${{ env.CONFORMANCE_REPORT_RELATIVE_PATH }}
       # Cache the conformance report for `conformance-report-comparison` job (pull_request event only)
       - name: Cache conformance report and build
@@ -53,7 +55,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       # Pull down cached `gradle build` and conformance report
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: actions/cache@v3
@@ -62,7 +64,7 @@ jobs:
           path: ./*
           key: ${{ github.sha }}-conformance-report
       - name: Use Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: 17
@@ -72,16 +74,16 @@ jobs:
         with:
           gradle-version: 8.7
       - name: Download `conformance_test_results.ion` from target branch
-        uses: dawidd6/action-download-artifact@v6
+        uses: actions/download-artifact@v4
         id: download-report
         continue-on-error: true
         with:
-          workflow: conformance-report.yml
-          commit: ${{ github.event.pull_request.base.sha }}
+          name: "conformance-report-${{ github.event.pull_request.head.sha }}"
+          path: ${{ env.PATH_TO_TEST_RUNNER }}/${{ env.CONFORMANCE_REPORT_RELATIVE_PATH }}
       # (If download of target branch report fails) Run the conformance tests (i.e. `gradle test`) and save to an Ion file.
       - name: (If download of target branch conformance report fails) Checkout target branch
-        uses: actions/checkout@v3
         if: ${{ steps.download-report.outcome == 'failure' }}
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           path: ${{ github.event.pull_request.base.sha }}
