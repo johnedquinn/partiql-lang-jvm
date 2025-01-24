@@ -32,11 +32,7 @@ internal class ExprSelect(
                         input.open(env)
                         _init = true
                     }
-                    val hasNext = input.hasNext()
-                    if (!hasNext) {
-                        input.close()
-                    }
-                    return hasNext
+                    return input.hasNext()
                 }
 
                 override fun next(): Datum {
@@ -53,5 +49,10 @@ internal class ExprSelect(
             true -> Datum.array(elements)
             false -> Datum.bag(elements)
         }
+    }
+
+    override fun close() {
+        constructor.close()
+        input.close()
     }
 }

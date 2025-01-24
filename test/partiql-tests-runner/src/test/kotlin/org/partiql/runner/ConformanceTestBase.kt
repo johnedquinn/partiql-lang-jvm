@@ -8,7 +8,7 @@ import org.partiql.runner.test.TestProvider
 import org.partiql.runner.test.TestRunner
 
 abstract class ConformanceTestBase<T, V> {
-    abstract val runner: TestRunner<T, V>
+    abstract val runner: TestRunner
     abstract val skipListForEvaluation: Set<Pair<String, CompileType>>
     abstract val skipListForEquivalence: Set<Pair<String, CompileType>>
 

@@ -62,6 +62,7 @@ import org.partiql.eval.internal.operator.rex.ExprSubqueryRow
 import org.partiql.eval.internal.operator.rex.ExprTable
 import org.partiql.eval.internal.operator.rex.ExprVar
 import org.partiql.plan.Action
+import org.partiql.plan.Action.Query
 import org.partiql.plan.Collation
 import org.partiql.plan.JoinType
 import org.partiql.plan.Operand
@@ -126,7 +127,7 @@ internal class StandardCompiler(strategies: List<Strategy>) : PartiQLCompiler {
 
     override fun prepare(plan: Plan, mode: Mode, ctx: Context): Statement {
         try {
-            val visitor = Visitor(mode)
+            val visitor = Visitor(mode, strategies)
             val operation = plan.action
             val statement: Statement = when {
                 operation is Action.Query -> visitor.compile(operation)
@@ -138,14 +139,23 @@ internal class StandardCompiler(strategies: List<Strategy>) : PartiQLCompiler {
         } catch (t: Throwable) {
             val error = PError.INTERNAL_ERROR(PErrorKind.COMPILATION(), null, t)
             ctx.errorListener.report(error)
-            return Statement { Datum.missing() }
+            return BadStatement
+        }
+    }
+
+    private object BadStatement : Statement {
+        override fun execute(): Datum {
+            return Datum.missing()
+        }
+
+        override fun close() {
         }
     }
 
     /**
      * Transforms plan relation operators into the internal physical operators.
      */
-    private inner class Visitor(mode: Mode) : OperatorVisitor<Expr, Unit> {
+    private class Visitor(mode: Mode, private val strategies: List<Strategy>) : OperatorVisitor<Expr, Unit> {
 
         private val mode = mode
         private val MODE = mode.code()
@@ -153,20 +163,27 @@ internal class StandardCompiler(strategies: List<Strategy>) : PartiQLCompiler {
         /**
          * Compile a query operation to a query statement.
          */
-        fun compile(action: Action.Query) = object : Statement {
+        fun compile(action: Query): Statement {
+            val root = compile(action.getRex(), Unit).catch()
+            return StatementImpl(root)
+        }
 
-            // compile the query root
-            private val root = compile(action.getRex(), Unit).catch()
-
+        private class StatementImpl(private val root: ExprValue) : Statement {
             // execute with no parameters
             override fun execute(): Datum {
                 return try {
                     root.eval(Environment())
                 } catch (e: PRuntimeException) {
+                    root.close()
                     throw e
                 } catch (t: Throwable) {
+                    root.close()
                     throw PErrors.internalErrorException(t)
                 }
+            }
+
+            override fun close() {
+                root.close()
             }
         }
 

@@ -8,6 +8,7 @@ import org.partiql.spi.function.builtins.internal.PErrors
 import org.partiql.spi.function.utils.StringUtils.codepointSubstring
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
+import java.util.function.Function
 
 /**
  * Built-in function to the substring of an existing string. This function
@@ -81,51 +82,67 @@ import org.partiql.spi.value.Datum
 internal val Fn_SUBSTRING__STRING_INT32__STRING = FnOverload.Builder("substring")
     .returns(PType.string())
     .addParameters(PType.string(), PType.integer())
-    .body { args ->
-        val value = args[0].string
-        val start = args[1].int
-        val result = value.codepointSubstring(start)
-        Datum.string(result)
-    }
+    .body(FnSubstringStringIntImpl)
     .build()
+
+private object FnSubstringStringIntImpl : Function<Array<Datum>, Datum> {
+    override fun apply(t: Array<Datum>): Datum {
+        val value = t[0].string
+        val start = t[1].int
+        val result = value.codepointSubstring(start)
+        return Datum.string(result)
+    }
+}
 
 internal val Fn_SUBSTRING__CLOB_INT64__CLOB = FnOverload.Builder("substring")
     .returns(PType.clob())
     .addParameters(PType.clob(), PType.integer())
-    .body { args ->
-        val value = args[0].bytes.toString(Charsets.UTF_8)
-        val start = args[1].int
-        val result = value.codepointSubstring(start)
-        Datum.clob(result.toByteArray())
-    }
+    .body(FnSubstringClobIntImpl)
     .build()
+
+private object FnSubstringClobIntImpl : Function<Array<Datum>, Datum> {
+    override fun apply(t: Array<Datum>): Datum {
+        val value = t[0].bytes.toString(Charsets.UTF_8)
+        val start = t[1].int
+        val result = value.codepointSubstring(start)
+        return Datum.clob(result.toByteArray())
+    }
+}
 
 internal val Fn_SUBSTRING__STRING_INT32_INT32__STRING = FnOverload.Builder("substring")
     .returns(PType.string())
     .addParameters(PType.string(), PType.integer(), PType.integer())
-    .body { args ->
-        val value = args[0].string
-        val start = args[1].int
-        val end = args[2].int
+    .body(FnSubstringStringIntIntImpl)
+    .build()
+
+private object FnSubstringStringIntIntImpl : Function<Array<Datum>, Datum> {
+    override fun apply(t: Array<Datum>): Datum {
+        val value = t[0].string
+        val start = t[1].int
+        val end = t[2].int
         if (end < 0) {
             throw PErrors.internalErrorException(IllegalArgumentException("End must be non-negative."))
         }
         val result = value.codepointSubstring(start, end)
-        Datum.string(result)
+        return Datum.string(result)
     }
-    .build()
+}
 
 internal val Fn_SUBSTRING__CLOB_INT64_INT64__CLOB = FnOverload.Builder("substring")
     .returns(PType.clob())
     .addParameters(PType.clob(), PType.integer(), PType.integer())
-    .body { args ->
-        val string = args[0].bytes.toString(Charsets.UTF_8)
-        val start = args[1].int
-        val end = args[2].int
+    .body(FnSubstringClobIntIntImpl)
+    .build()
+
+private object FnSubstringClobIntIntImpl : Function<Array<Datum>, Datum> {
+    override fun apply(t: Array<Datum>): Datum {
+        val value = t[0].bytes.toString(Charsets.UTF_8)
+        val start = t[1].int
+        val end = t[2].int
         if (end < 0) {
             throw PErrors.internalErrorException(IllegalArgumentException("End must be non-negative."))
         }
-        val result = string.codepointSubstring(start, end)
-        Datum.clob(result.toByteArray())
+        val result = value.codepointSubstring(start, end)
+        return Datum.clob(result.toByteArray())
     }
-    .build()
+}

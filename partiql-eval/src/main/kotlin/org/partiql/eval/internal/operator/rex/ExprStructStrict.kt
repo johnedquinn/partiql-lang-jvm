@@ -27,4 +27,11 @@ internal class ExprStructStrict(private val fields: List<ExprStructField>) :
         }
         return Datum.struct(fields)
     }
+
+    override fun close() {
+        fields.forEach {
+            it.key.close()
+            it.value.close()
+        }
+    }
 }

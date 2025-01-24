@@ -2,6 +2,7 @@ package org.partiql.spi.function
 
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
+import java.util.function.Function
 
 /**
  * Factory methods for standard function implementations.
@@ -24,7 +25,7 @@ internal object Function {
         returns: PType,
         isNullCall: Boolean = true,
         isMissingCall: Boolean = true,
-        invoke: (Array<Datum>) -> Datum,
+        invoke: Function<Array<Datum>, Datum>,
     ): Fn {
         return Fn.Builder(name)
             .returns(returns)
@@ -51,7 +52,7 @@ internal object Function {
         returns: PType,
         isNullCall: Boolean = true,
         isMissingCall: Boolean = true,
-        invoke: (Array<Datum>) -> Datum,
+        invoke: Function<Array<Datum>, Datum>,
     ): FnOverload = FnOverload.Builder(name)
         .returns(returns)
         .addParameters(parameters.toList())

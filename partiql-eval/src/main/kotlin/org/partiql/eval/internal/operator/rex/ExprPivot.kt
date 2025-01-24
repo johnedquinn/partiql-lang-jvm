@@ -27,4 +27,10 @@ internal class ExprPivot(
         input.close()
         return Datum.struct(fields)
     }
+
+    override fun close() {
+        input.close()
+        key.close()
+        value.close()
+    }
 }

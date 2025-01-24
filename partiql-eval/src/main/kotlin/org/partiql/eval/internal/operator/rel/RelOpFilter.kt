@@ -29,6 +29,7 @@ internal class RelOpFilter(
 
     override fun closePeeking() {
         input.close()
+        expr.close()
     }
 
     private fun conditionIsTrue(row: Row, expr: ExprValue): Boolean {

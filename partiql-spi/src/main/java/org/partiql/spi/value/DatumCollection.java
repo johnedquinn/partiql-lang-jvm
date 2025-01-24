@@ -14,10 +14,8 @@ import java.util.Iterator;
  */
 class DatumCollection implements Datum {
 
-    @NotNull
-    private final Iterable<Datum> _value;
+    private Iterable<Datum> _value;
 
-    @NotNull
     private final PType _type;
 
     DatumCollection(@NotNull Iterable<Datum> value, @NotNull PType type) {

@@ -22,6 +22,13 @@ internal class ExprStructPermissive(private val fields: List<ExprStructField>) :
         return Datum.struct(fields)
     }
 
+    override fun close() {
+        fields.forEach {
+            it.key.close()
+            it.value.close()
+        }
+    }
+
     companion object {
         /**
          * @return the underlying string value of a textual value; null if the type is not a textual value or if the

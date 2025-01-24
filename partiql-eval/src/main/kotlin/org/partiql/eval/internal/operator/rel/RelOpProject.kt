@@ -29,5 +29,6 @@ internal class RelOpProject(
 
     override fun close() {
         input.close()
+        projections.forEach { it.close() }
     }
 }

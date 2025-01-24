@@ -35,5 +35,6 @@ internal class RelOpLimit(
 
     override fun close() {
         input.close()
+        limit.close()
     }
 }

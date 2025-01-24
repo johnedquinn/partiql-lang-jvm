@@ -7,6 +7,7 @@ import org.partiql.spi.function.FnOverload
 import org.partiql.spi.function.utils.FunctionUtils
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
+import java.util.function.Function
 
 /**
  * According to SQL:1999:
@@ -28,13 +29,18 @@ internal val FnEq = FnOverload.Builder(name)
     .returns(PType.bool())
     .isNullCall(true)
     .isMissingCall(false)
-    .body { args ->
-        val lhs = args[0]
-        val rhs = args[1]
-        if (lhs.isMissing || rhs.isMissing) {
+    .body(Impl)
+    .build()
+
+private object Impl : Function<Array<Datum>, Datum> {
+    private val comparator = Datum.comparator()
+    override fun apply(t: Array<Datum>): Datum {
+        val lhs = t[0]
+        val rhs = t[1]
+        return if (lhs.isMissing || rhs.isMissing) {
             Datum.nullValue(PType.bool())
         } else {
-            Datum.bool(Datum.comparator().compare(lhs, rhs) == 0)
+            Datum.bool(comparator.compare(lhs, rhs) == 0)
         }
     }
-    .build()
+}

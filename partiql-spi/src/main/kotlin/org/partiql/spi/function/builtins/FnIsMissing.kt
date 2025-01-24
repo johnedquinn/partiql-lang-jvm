@@ -8,6 +8,7 @@ import org.partiql.spi.function.Parameter
 import org.partiql.spi.function.utils.FunctionUtils
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
+import java.util.function.Function
 
 /**
  * Function (operator) for the `IS MISSING` special form. Its name is hidden via [FunctionUtils.hide].
@@ -18,7 +19,11 @@ internal val Fn_IS_MISSING__ANY__BOOL = FnOverload.Builder(name)
     .addParameter(Parameter("value", PType.dynamic()))
     .isNullCall(false)
     .isMissingCall(false)
-    .body { args ->
-        Datum.bool(args[0].isMissing)
-    }
+    .body(IsMissingBody)
     .build()
+
+private object IsMissingBody : Function<Array<Datum>, Datum> {
+    override fun apply(args: Array<Datum>): Datum {
+        return Datum.bool(args[0].isMissing)
+    }
+}

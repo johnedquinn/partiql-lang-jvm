@@ -48,5 +48,7 @@ internal class RelOpIteratePermissive(
         }
     }
 
-    override fun close() {}
+    override fun close() {
+        expr.close()
+    }
 }

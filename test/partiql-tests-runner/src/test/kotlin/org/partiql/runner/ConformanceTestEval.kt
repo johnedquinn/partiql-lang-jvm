@@ -5,9 +5,8 @@ import org.partiql.eval.Statement
 import org.partiql.runner.executor.EvalExecutor
 import org.partiql.runner.report.ReportGenerator
 import org.partiql.runner.test.TestRunner
-import org.partiql.spi.value.Datum
 
-class ConformanceTestEval : ConformanceTestBase<Statement, Datum>() {
+class ConformanceTestEval : ConformanceTestBase<Statement, Statement>() {
     companion object {
         @JvmStatic
         @RegisterExtension

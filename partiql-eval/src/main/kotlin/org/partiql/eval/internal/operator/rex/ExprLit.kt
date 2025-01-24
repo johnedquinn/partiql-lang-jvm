@@ -13,4 +13,8 @@ internal class ExprLit(value: Datum) : ExprValue {
     private var _value = value
 
     override fun eval(env: Environment): Datum = _value
+
+    override fun close() {
+        _value
+    }
 }

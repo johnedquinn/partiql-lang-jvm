@@ -14,13 +14,11 @@ import java.util.Map;
  */
 class DatumStruct implements Datum {
 
-    @NotNull
-    private final HashMap<String, List<Datum>> _delegate;
+    private HashMap<String, List<Datum>> _delegate;
 
-    @NotNull
-    private final HashMap<String, List<Datum>> _delegateNormalized;
+    private HashMap<String, List<Datum>> _delegateNormalized;
 
-    private final static PType _type = PType.struct();
+    private static final PType _type = PType.struct();
 
     DatumStruct(@NotNull Iterable<Field> fields) {
         _delegate = new HashMap<>();

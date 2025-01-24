@@ -14,4 +14,8 @@ public interface ExprValue extends Expr {
      * @return      The expression result.
      */
     public Datum eval(Environment env);
+
+    public default void close() {
+        // Do nothing
+    }
 }

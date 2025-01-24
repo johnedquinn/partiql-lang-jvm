@@ -41,7 +41,7 @@ internal object FunctionUtils {
         returns: PType,
         isNullCall: Boolean = true,
         isMissingCall: Boolean = true,
-        invoke: (Array<Datum>) -> Datum,
+        invoke: java.util.function.Function<Array<Datum>, Datum>,
     ): FnOverload {
         val hiddenName = hide(name)
         return FnOverload.Builder(hiddenName)

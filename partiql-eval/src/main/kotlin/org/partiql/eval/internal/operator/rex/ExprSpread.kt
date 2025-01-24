@@ -24,4 +24,8 @@ internal class ExprSpread(
 
         return Datum.struct(tuples.flatMap { it.fields.asSequence() })
     }
+
+    override fun close() {
+        args.forEach { it.close() }
+    }
 }

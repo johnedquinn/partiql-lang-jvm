@@ -49,8 +49,6 @@ internal sealed class RelOpUnpivot : ExprRelation {
         return Row.of(k, v)
     }
 
-    override fun close() {}
-
     /**
      * In strict mode, the UNPIVOT operator raises an error on mistyped input.
      *
@@ -65,6 +63,10 @@ internal sealed class RelOpUnpivot : ExprRelation {
                 throw PErrors.structureExpectedException(type)
             }
             return v
+        }
+
+        override fun close() {
+            expr.close()
         }
     }
 
@@ -88,6 +90,10 @@ internal sealed class RelOpUnpivot : ExprRelation {
                 PType.STRUCT, PType.ROW -> v
                 else -> Datum.struct(listOf(Field.of("_1", v)))
             }
+        }
+
+        override fun close() {
+            expr.close()
         }
     }
 }

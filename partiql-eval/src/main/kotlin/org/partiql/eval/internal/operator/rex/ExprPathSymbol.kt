@@ -19,4 +19,8 @@ internal class ExprPathSymbol(
         }
         return struct.getInsensitive(symbol) ?: throw PErrors.pathSymbolFailureException()
     }
+
+    override fun close() {
+        root.close()
+    }
 }

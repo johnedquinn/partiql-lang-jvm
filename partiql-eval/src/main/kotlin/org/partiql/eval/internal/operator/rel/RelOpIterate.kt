@@ -43,5 +43,7 @@ internal class RelOpIterate(
         return Row(arrayOf(v, Datum.bigint(i)))
     }
 
-    override fun close() {}
+    override fun close() {
+        expr.close()
+    }
 }

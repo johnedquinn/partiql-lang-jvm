@@ -8,6 +8,7 @@ import org.partiql.spi.function.builtins.internal.PErrors
 import org.partiql.spi.internal.isZero
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
+import java.math.BigDecimal
 
 internal object FnModulo : DiadicArithmeticOperator("mod", false) {
 
@@ -65,26 +66,12 @@ internal object FnModulo : DiadicArithmeticOperator("mod", false) {
 
     override fun getNumericInstance(numericLhs: PType, numericRhs: PType): Fn {
         val (p, s) = decimalPrecisionScale(numericLhs, numericRhs)
-        return basic(PType.numeric(p, s), numericLhs, numericRhs) { args ->
-            val arg0 = args[0].bigDecimal
-            val arg1 = args[1].bigDecimal
-            if (arg1.isZero()) {
-                throw PErrors.divisionByZeroException(arg0, PType.numeric(p, s))
-            }
-            Datum.numeric(arg0 % arg1, p, s)
-        }
+        return basic(PType.numeric(p, s), numericLhs, numericRhs, DecimalImpl(p, s, Datum::numeric))
     }
 
     override fun getDecimalInstance(decimalLhs: PType, decimalRhs: PType): Fn {
         val (p, s) = decimalPrecisionScale(decimalLhs, decimalRhs)
-        return basic(PType.decimal(p, s), decimalLhs, decimalRhs) { args ->
-            val arg0 = args[0].bigDecimal
-            val arg1 = args[1].bigDecimal
-            if (arg1.isZero()) {
-                throw PErrors.divisionByZeroException(arg0, PType.decimal(p, s))
-            }
-            Datum.decimal(arg0 % arg1, p, s)
-        }
+        return basic(PType.decimal(p, s), decimalLhs, decimalRhs, DecimalImpl(p, s, Datum::decimal))
     }
 
     /**
@@ -121,6 +108,17 @@ internal object FnModulo : DiadicArithmeticOperator("mod", false) {
                 throw PErrors.divisionByZeroException(arg0, PType.doublePrecision())
             }
             Datum.doublePrecision(arg0 % arg1)
+        }
+    }
+
+    private class DecimalImpl(private val p: Int, private val s: Int, private val datumCreate: (BigDecimal, Int, Int) -> Datum) : java.util.function.Function<Array<Datum>, Datum> {
+        override fun apply(t: Array<Datum>): Datum {
+            val arg0 = t[0].bigDecimal
+            val arg1 = t[1].bigDecimal
+            if (arg1.isZero()) {
+                throw PErrors.divisionByZeroException(arg0, PType.decimal(p, s))
+            }
+            return datumCreate(arg0 % arg1, p, s)
         }
     }
 }

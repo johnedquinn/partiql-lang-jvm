@@ -32,4 +32,8 @@ internal class ExprPermissive(private var expr: ExprValue) :
             Datum.missing()
         }
     }
+
+    override fun close() {
+        expr.close()
+    }
 }

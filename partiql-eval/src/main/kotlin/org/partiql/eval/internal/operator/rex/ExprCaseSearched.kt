@@ -25,4 +25,11 @@ internal class ExprCaseSearched(branches: List<ExprCaseBranch>, default: ExprVal
         // default
         return _default?.eval(env) ?: Datum.nullValue()
     }
+
+    override fun close() {
+        _branches.forEach {
+            it.close()
+        }
+        _default?.let { it.close() }
+    }
 }

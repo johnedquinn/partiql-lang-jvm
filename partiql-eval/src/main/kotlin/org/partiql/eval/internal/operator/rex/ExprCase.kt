@@ -23,4 +23,12 @@ internal class ExprCase(
     private fun Datum.isTrue(): Boolean {
         return this.type.code() == PType.BOOL && !this.isNull && !this.isMissing && this.boolean
     }
+
+    override fun close() {
+        branches.forEach { branch ->
+            branch.first.close()
+            branch.second.close()
+        }
+        default.close()
+    }
 }

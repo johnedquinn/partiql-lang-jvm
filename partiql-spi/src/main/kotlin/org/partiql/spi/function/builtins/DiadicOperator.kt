@@ -10,6 +10,8 @@ import org.partiql.spi.function.utils.FunctionUtils
 import org.partiql.spi.internal.SqlTypeFamily
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
+import java.util.concurrent.Callable
+import java.util.function.BiFunction
 
 /**
  * This represents an operator backed by a function overload. Note that the name of the operator is hidden
@@ -52,7 +54,7 @@ internal abstract class DiadicOperator(
         val rhs = args[1]
         val (newLhs, newRhs) = getOperands(lhs, rhs) ?: return null
         val instance = instances[lhs.code()][rhs.code()]
-        return instance(newLhs, newRhs)
+        return instance.apply(newLhs, newRhs)
     }
 
     private fun getOperands(lhs: PType, rhs: PType): Pair<PType, PType>? {
@@ -231,17 +233,23 @@ internal abstract class DiadicOperator(
      * This is a lookup table for finding the appropriate instance for the given types. The table is
      * initialized on construction using the get*Instance methods.
      */
-    protected val instances: Array<Array<(PType, PType) -> Fn?>> = Array(PType.codes().size) {
+    private val instances: Array<Array<BiFunction<PType, PType, Fn?>>> = Array(PType.codes().size) {
         Array(PType.codes().size) {
-            { _, _ -> null }
+            EmptyBiFunc
         }
     }
 
-    protected fun fillTable(lhs: Int, rhs: Int, instance: (PType, PType) -> Fn?) {
+    private object EmptyBiFunc : BiFunction<PType, PType, Fn?> {
+        override fun apply(lhs: PType, rhs: PType): Fn? {
+            return null
+        }
+    }
+
+    protected fun fillTable(lhs: Int, rhs: Int, instance: BiFunction<PType, PType, Fn?>) {
         instances[lhs][rhs] = instance
     }
 
-    protected fun fillNumberTable(highPrecedence: Int, instance: (PType, PType) -> Fn?) {
+    private fun fillNumberTable(highPrecedence: Int, instance: (PType, PType) -> Fn?) {
         return fillPrioritizedTable(highPrecedence, SqlTypeFamily.NUMBER, instance)
     }
 
@@ -249,109 +257,163 @@ internal abstract class DiadicOperator(
         return fillPrioritizedTable(highPrecedence, SqlTypeFamily.TEXT, instance)
     }
 
-    protected fun fillPrioritizedTable(highPrecedence: Int, family: SqlTypeFamily, instance: (PType, PType) -> Fn?) {
+    private fun fillPrioritizedTable(highPrecedence: Int, family: SqlTypeFamily, instance: (PType, PType) -> Fn?) {
         val members = family.members + setOf(PType.UNKNOWN)
         members.filter {
             (TYPE_PRECEDENCE[highPrecedence]!! > TYPE_PRECEDENCE[it]!!)
         }.forEach {
-            fillTable(highPrecedence, it) { lhs, _ -> instance(lhs, lhs) }
-            fillTable(it, highPrecedence) { _, rhs -> instance(rhs, rhs) }
+            fillTable(highPrecedence, it, LeftOnly(instance))
+            fillTable(it, highPrecedence, RightOnly(instance))
         }
-        fillTable(highPrecedence, highPrecedence) { lhs, rhs -> instance(lhs, rhs) }
+        fillTable(highPrecedence, highPrecedence, Exact(instance))
     }
 
     private fun fillBooleanTable(instance: (PType, PType) -> Fn?) {
-        fillTable(PType.BOOL, PType.BOOL) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.BOOL, PType.UNKNOWN) { lhs, _ -> instance(lhs, lhs) }
-        fillTable(PType.UNKNOWN, PType.BOOL) { _, rhs -> instance(rhs, rhs) }
+        fillTable(PType.BOOL, PType.BOOL, Exact(instance))
+        fillTable(PType.BOOL, PType.UNKNOWN, LeftOnly(instance))
+        fillTable(PType.UNKNOWN, PType.BOOL, RightOnly(instance))
     }
 
     private fun fillTimestampTable(instance: (PType, PType) -> Fn?) {
-        fillTable(PType.TIMESTAMPZ, PType.TIMESTAMPZ) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIMESTAMP, PType.TIMESTAMP) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIMESTAMPZ, PType.TIMESTAMP) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIMESTAMP, PType.TIMESTAMPZ) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIMESTAMP, PType.UNKNOWN) { lhs, _ -> instance(lhs, lhs) }
-        fillTable(PType.TIMESTAMPZ, PType.UNKNOWN) { lhs, _ -> instance(lhs, lhs) }
-        fillTable(PType.UNKNOWN, PType.TIMESTAMP) { _, rhs -> instance(rhs, rhs) }
-        fillTable(PType.UNKNOWN, PType.TIMESTAMPZ) { _, rhs -> instance(rhs, rhs) }
+        fillTable(PType.TIMESTAMPZ, PType.TIMESTAMPZ, Exact(instance))
+        fillTable(PType.TIMESTAMP, PType.TIMESTAMP, Exact(instance))
+        fillTable(PType.TIMESTAMPZ, PType.TIMESTAMP, Exact(instance))
+        fillTable(PType.TIMESTAMP, PType.TIMESTAMPZ, Exact(instance))
+        fillTable(PType.TIMESTAMP, PType.UNKNOWN, LeftOnly(instance))
+        fillTable(PType.TIMESTAMPZ, PType.UNKNOWN, LeftOnly(instance))
+        fillTable(PType.UNKNOWN, PType.TIMESTAMP, RightOnly(instance))
+        fillTable(PType.UNKNOWN, PType.TIMESTAMPZ, RightOnly(instance))
     }
 
     private fun fillTimeTable(instance: (PType, PType) -> Fn?) {
-        fillTable(PType.TIMEZ, PType.TIMEZ) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIME, PType.TIME) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIMEZ, PType.TIME) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIME, PType.TIMEZ) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.TIMEZ, PType.UNKNOWN) { lhs, _ -> instance(lhs, lhs) }
-        fillTable(PType.TIME, PType.UNKNOWN) { lhs, _ -> instance(lhs, lhs) }
-        fillTable(PType.UNKNOWN, PType.TIME) { _, rhs -> instance(rhs, rhs) }
-        fillTable(PType.UNKNOWN, PType.TIMEZ) { _, rhs -> instance(rhs, rhs) }
+        fillTable(PType.TIMEZ, PType.TIMEZ, Exact(instance))
+        fillTable(PType.TIME, PType.TIME, Exact(instance))
+        fillTable(PType.TIMEZ, PType.TIME, Exact(instance))
+        fillTable(PType.TIME, PType.TIMEZ, Exact(instance))
+        fillTable(PType.TIMEZ, PType.UNKNOWN, LeftOnly(instance))
+        fillTable(PType.TIME, PType.UNKNOWN, LeftOnly(instance))
+        fillTable(PType.UNKNOWN, PType.TIME, RightOnly(instance))
+        fillTable(PType.UNKNOWN, PType.TIMEZ, RightOnly(instance))
     }
 
     private fun fillDateTable(instance: (PType, PType) -> Fn?) {
-        fillTable(PType.DATE, PType.DATE) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.DATE, PType.UNKNOWN) { lhs, _ -> instance(lhs, lhs) }
-        fillTable(PType.UNKNOWN, PType.DATE) { _, rhs -> instance(rhs, rhs) }
+        fillTable(PType.DATE, PType.DATE, Exact(instance))
+        fillTable(PType.DATE, PType.UNKNOWN, LeftOnly(instance))
+        fillTable(PType.UNKNOWN, PType.DATE, RightOnly(instance))
     }
 
-    private fun fillBlobTable(instance: (PType, PType) -> Fn?) {
-        fillTable(PType.BLOB, PType.BLOB) { lhs, rhs -> instance(lhs, rhs) }
-        fillTable(PType.BLOB, PType.UNKNOWN) { lhs, _ -> instance(lhs, lhs) }
-        fillTable(PType.UNKNOWN, PType.BLOB) { _, rhs -> instance(rhs, rhs) }
+    private fun fillBlobTable(instance: BiFunction<PType, PType, Fn?>) {
+        fillTable(PType.BLOB, PType.BLOB, Exact(instance))
+        fillTable(PType.BLOB, PType.UNKNOWN, LeftOnly(instance))
+        fillTable(PType.UNKNOWN, PType.BLOB, RightOnly(instance))
     }
 
     private fun fillNumericTable() {
         // Tiny Int
-        fillTable(PType.TINYINT, PType.NUMERIC) { lhs, rhs -> getNumericInstance(NUM_TINY_INT, rhs) }
-        fillTable(PType.NUMERIC, PType.TINYINT) { lhs, rhs -> getNumericInstance(lhs, NUM_TINY_INT) }
+        fillTable(PType.TINYINT, PType.NUMERIC, ReplaceLeft(NUM_TINY_INT, ::getNumericInstance))
+        fillTable(PType.NUMERIC, PType.TINYINT, ReplaceRight(NUM_TINY_INT, ::getNumericInstance))
 
         // Small Int
-        fillTable(PType.SMALLINT, PType.NUMERIC) { lhs, rhs -> getNumericInstance(NUM_SMALL_INT, rhs) }
-        fillTable(PType.NUMERIC, PType.SMALLINT) { lhs, rhs -> getNumericInstance(lhs, NUM_SMALL_INT) }
+        fillTable(PType.SMALLINT, PType.NUMERIC, ReplaceLeft(NUM_SMALL_INT, ::getNumericInstance))
+        fillTable(PType.NUMERIC, PType.SMALLINT, ReplaceRight(NUM_SMALL_INT, ::getNumericInstance))
 
         // Integer
-        fillTable(PType.INTEGER, PType.NUMERIC) { lhs, rhs -> getNumericInstance(NUM_INT, rhs) }
-        fillTable(PType.NUMERIC, PType.INTEGER) { lhs, rhs -> getNumericInstance(lhs, NUM_INT) }
+        fillTable(PType.INTEGER, PType.NUMERIC, ReplaceLeft(NUM_INT, ::getNumericInstance))
+        fillTable(PType.NUMERIC, PType.INTEGER, ReplaceRight(NUM_INT, ::getNumericInstance))
 
         // Big Int
-        fillTable(PType.BIGINT, PType.NUMERIC) { lhs, rhs -> getNumericInstance(NUM_BIG_INT, rhs) }
-        fillTable(PType.NUMERIC, PType.BIGINT) { lhs, rhs -> getNumericInstance(lhs, NUM_BIG_INT) }
+        fillTable(PType.BIGINT, PType.NUMERIC, ReplaceLeft(NUM_BIG_INT, ::getNumericInstance))
+        fillTable(PType.NUMERIC, PType.BIGINT, ReplaceRight(NUM_BIG_INT, ::getNumericInstance))
 
         // Numeric
-        fillTable(PType.NUMERIC, PType.NUMERIC) { lhs, rhs -> getNumericInstance(lhs, rhs) }
-        fillTable(PType.UNKNOWN, PType.NUMERIC) { lhs, rhs -> getNumericInstance(rhs, rhs) }
-        fillTable(PType.NUMERIC, PType.UNKNOWN) { lhs, rhs -> getNumericInstance(lhs, lhs) }
+        fillTable(PType.NUMERIC, PType.NUMERIC, ::getNumericInstance)
+        fillTable(PType.UNKNOWN, PType.NUMERIC, RightOnly(::getNumericInstance))
+        fillTable(PType.NUMERIC, PType.UNKNOWN, LeftOnly(::getNumericInstance))
+    }
+
+    private class Exact(private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(t, u)
+        }
+    }
+
+    private class Switch(private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(u, t)
+        }
+    }
+
+    private class RightOnly(private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(u, u)
+        }
+    }
+
+    private class LeftOnly(private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(t, t)
+        }
+    }
+
+    private class ReplaceLeft(private val left: PType, private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(left, u)
+        }
+    }
+
+    private class ReplaceRight(private val right: PType, private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(t, right)
+        }
     }
 
     private fun fillDecimalTable() {
         // Tiny Int
-        fillTable(PType.TINYINT, PType.DECIMAL) { lhs, rhs -> getDecimalInstance(DEC_TINY_INT, rhs) }
-        fillTable(PType.DECIMAL, PType.TINYINT) { lhs, rhs -> getDecimalInstance(lhs, DEC_TINY_INT) }
+        fillTable(PType.TINYINT, PType.DECIMAL, ReplaceLeft(DEC_TINY_INT, ::getDecimalInstance))
+        fillTable(PType.DECIMAL, PType.TINYINT, ReplaceRight(DEC_TINY_INT, ::getDecimalInstance))
 
         // Small Int
-        fillTable(PType.SMALLINT, PType.DECIMAL) { lhs, rhs -> getDecimalInstance(DEC_SMALL_INT, rhs) }
-        fillTable(PType.DECIMAL, PType.SMALLINT) { lhs, rhs -> getDecimalInstance(lhs, DEC_SMALL_INT) }
+        fillTable(PType.SMALLINT, PType.DECIMAL, ReplaceLeft(DEC_SMALL_INT, ::getDecimalInstance))
+        fillTable(PType.DECIMAL, PType.SMALLINT, ReplaceRight(DEC_SMALL_INT, ::getDecimalInstance))
 
         // Integer
-        fillTable(PType.INTEGER, PType.DECIMAL) { lhs, rhs -> getDecimalInstance(DEC_INT, rhs) }
-        fillTable(PType.DECIMAL, PType.INTEGER) { lhs, rhs -> getDecimalInstance(lhs, DEC_INT) }
+        fillTable(PType.INTEGER, PType.DECIMAL, ReplaceLeft(DEC_INT, ::getDecimalInstance))
+        fillTable(PType.DECIMAL, PType.INTEGER, ReplaceRight(DEC_INT, ::getDecimalInstance))
 
         // Big Int
-        fillTable(PType.BIGINT, PType.DECIMAL) { lhs, rhs -> getDecimalInstance(DEC_BIG_INT, rhs) }
-        fillTable(PType.DECIMAL, PType.BIGINT) { lhs, rhs -> getDecimalInstance(lhs, DEC_BIG_INT) }
+        fillTable(PType.BIGINT, PType.DECIMAL, ReplaceLeft(DEC_BIG_INT, ::getDecimalInstance))
+        fillTable(PType.DECIMAL, PType.BIGINT, ReplaceRight(DEC_BIG_INT, ::getDecimalInstance))
 
         // Numeric
-        fillTable(PType.NUMERIC, PType.DECIMAL) { lhs, rhs -> getDecimalInstance(PType.decimal(lhs.precision, lhs.scale), rhs) }
-        fillTable(PType.DECIMAL, PType.NUMERIC) { lhs, rhs -> getDecimalInstance(lhs, PType.decimal(rhs.precision, rhs.scale)) }
+        fillTable(PType.NUMERIC, PType.DECIMAL, NumericDecimalBiFunction(::getDecimalInstance))
+        fillTable(PType.DECIMAL, PType.NUMERIC, DecimalNumericBiFunction(::getDecimalInstance))
 
         // Decimal
-        fillTable(PType.DECIMAL, PType.DECIMAL) { lhs, rhs -> getDecimalInstance(lhs, rhs) }
-        fillTable(PType.UNKNOWN, PType.DECIMAL) { lhs, rhs -> getDecimalInstance(rhs, rhs) }
-        fillTable(PType.DECIMAL, PType.UNKNOWN) { lhs, rhs -> getDecimalInstance(lhs, lhs) }
+        fillTable(PType.DECIMAL, PType.DECIMAL, ::getDecimalInstance)
+        fillTable(PType.UNKNOWN, PType.DECIMAL, RightOnly(::getDecimalInstance))
+        fillTable(PType.DECIMAL, PType.UNKNOWN, LeftOnly(::getDecimalInstance))
     }
 
     private fun fillUnknownTable() {
-        fillTable(PType.UNKNOWN, PType.UNKNOWN) { _, _ -> getUnknownInstance() }
+        fillTable(PType.UNKNOWN, PType.UNKNOWN, NoArgBiFunction(::getUnknownInstance))
+    }
+
+    private class NumericDecimalBiFunction(private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(PType.decimal(t.precision, t.scale), u)
+        }
+    }
+
+    private class DecimalNumericBiFunction(private val impl: BiFunction<PType, PType, Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return impl.apply(t, PType.decimal(u.precision, u.scale))
+        }
+    }
+
+    private class NoArgBiFunction(private val r: Callable<Fn?>) : BiFunction<PType, PType, Fn?> {
+        override fun apply(t: PType, u: PType): Fn? {
+            return r.call()
+        }
     }
 
     protected fun fillTable() {
@@ -375,7 +437,7 @@ internal abstract class DiadicOperator(
         fillUnknownTable()
     }
 
-    protected fun basic(returns: PType, lhs: PType, rhs: PType, invocation: (Array<Datum>) -> Datum): Fn {
+    protected fun basic(returns: PType, lhs: PType, rhs: PType, invocation: java.util.function.Function<Array<Datum>, Datum>): Fn {
         return Function.instance(
             name = name,
             returns = returns,
@@ -387,11 +449,11 @@ internal abstract class DiadicOperator(
         )
     }
 
-    protected fun basic(returns: PType, args: PType, invocation: (Array<Datum>) -> Datum): Fn {
+    protected fun basic(returns: PType, args: PType, invocation: java.util.function.Function<Array<Datum>, Datum>): Fn {
         return basic(returns, args, args, invocation)
     }
 
-    protected fun basic(arg: PType, invocation: (Array<Datum>) -> Datum): Fn {
+    protected fun basic(arg: PType, invocation: java.util.function.Function<Array<Datum>, Datum>): Fn {
         return basic(arg, arg, arg, invocation)
     }
 }

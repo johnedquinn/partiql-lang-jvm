@@ -28,7 +28,6 @@ import org.partiql.spi.errors.Severity
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
 import org.partiql.spi.value.ValueUtils
-import org.partiql.value.PartiQLValue
 import org.partiql.value.io.DatumIonReaderBuilder
 import org.partiql.value.toIon
 import kotlin.test.assertEquals
@@ -40,7 +39,12 @@ import kotlin.test.assertEquals
 class EvalExecutor(
     private val session: Session,
     private val mode: Mode,
-) : TestExecutor<Statement, Datum> {
+) : TestExecutor<Statement, Statement> {
+
+    val compiler = PartiQLCompiler.standard()
+    val parser = PartiQLParser.standard()
+    val planner = PartiQLPlanner.standard()
+    val comparator = Datum.comparator()
 
     override fun prepare(input: String): Statement {
         val listener = getErrorListener(mode)
@@ -84,22 +88,40 @@ class EvalExecutor(
         }
     }
 
-    override fun execute(input: Statement): Datum {
-        return input.execute()
+    override fun execute(input: Statement): Statement {
+        return input
     }
 
-    override fun fromIon(value: IonValue): Datum {
-        return DatumIonReaderBuilder.standard().build(value.toIonElement()).read()
+    override fun fromIon(value: IonValue): Statement {
+        return IonStatement(value)
     }
 
-    override fun toIon(value: Datum): IonValue {
-        val partiql = ValueUtils.newPartiQLValue(value)
+    private class IonStatement(private val value: IonValue): Statement {
+        override fun close() {
+        }
+
+        override fun execute(): Datum {
+            return DatumIonReaderBuilder.standard().build(value.toIonElement()).read()
+        }
+    }
+
+    override fun toIon(value: Statement): IonValue {
+        val d = value.execute()
+        val partiql = ValueUtils.newPartiQLValue(d)
+        value.close()
         return partiql.toIon().toIonValue(ION)
     }
 
     // TODO: Use DATUM
-    override fun compare(actual: Datum, expect: Datum): Boolean {
-        return valueComparison(ValueUtils.newPartiQLValue(actual), ValueUtils.newPartiQLValue(expect))
+    override fun compare(actual: Statement, expect: Statement): Boolean {
+        val actualD = actual.execute()
+        val expectD = expect.execute()
+        val v1 = DatumMaterialize.materialize(actualD)
+        val v2 = DatumMaterialize.materialize(expectD)
+        val result = valueComparison(v1, v2)
+        actual.close()
+        expect.close()
+        return result
     }
 
     // Value comparison of PartiQL Value that utilized Ion Hashcode.
@@ -108,14 +130,12 @@ class EvalExecutor(
     // annotation::1 is considered different from 1
     // 1 of type INT is considered the same as 1 of type INT32
     // we should probably consider adding our own hashcode implementation
-    private fun valueComparison(v1: PartiQLValue, v2: PartiQLValue): Boolean {
+    private fun valueComparison(v1: Datum, v2: Datum): Boolean {
         // Additional check to put on annotation
         // we want to have
         // annotation::null.int == annotation::null.bool  <- True
         // annotation::null.int == other::null.int <- False
-        if (v1.annotations != v2.annotations) {
-            return false
-        }
+        // TODO: Annotations
         if (v1.isNull && v2.isNull) {
             return true
         }
@@ -127,28 +147,25 @@ class EvalExecutor(
         if (comparator.compare(v1, v2) == 0) {
             return true
         }
-        if (v1.toIon().hashCode() == v2.toIon().hashCode()) {
+        val pv1 = ValueUtils.newPartiQLValue(v1)
+        val pv2 = ValueUtils.newPartiQLValue(v2)
+        if (pv1.toIon().hashCode() == pv2.toIon().hashCode()) {
             return true
         }
         // Ion element hash code contains a bug
         // Hashcode of BigIntIntElementImpl(BigInteger.ONE) is not the same as that of LongIntElementImpl(1)
-        if (v1.toIon().type == ElementType.INT && v2.toIon().type == ElementType.INT) {
-            return v1.toIon().asAnyElement().bigIntegerValue == v2.toIon().asAnyElement().bigIntegerValue
+        if (pv1.toIon().type == ElementType.INT && pv2.toIon().type == ElementType.INT) {
+            return pv1.toIon().asAnyElement().bigIntegerValue == pv2.toIon().asAnyElement().bigIntegerValue
         }
         return false
     }
 
-    companion object {
-        val compiler = PartiQLCompiler.standard()
+    object Factory : TestExecutor.Factory<Statement, Statement> {
+
         val parser = PartiQLParser.standard()
         val planner = PartiQLPlanner.standard()
-        // TODO REPLACE WITH DATUM COMPARATOR
-        val comparator = PartiQLValue.comparator()
-    }
 
-    object Factory : TestExecutor.Factory<Statement, Datum> {
-
-        override fun create(env: IonStruct, options: CompileType): TestExecutor<Statement, Datum> {
+        override fun create(env: IonStruct, options: CompileType): TestExecutor<Statement, Statement> {
             // infer catalog from conformance test `env`
             val catalog = infer(env.toIonElement() as StructElement)
             val session = Session.builder()

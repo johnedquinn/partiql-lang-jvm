@@ -41,11 +41,25 @@ internal class ExprCallDynamic(
      */
     private val paramIndices: IntRange = args.indices
 
+    /**
+     * A memoization cache for the [match] function.
+     */
+    private val candidates: MutableMap<Array<PType>, Candidate> = mutableMapOf()
+
     override fun eval(env: Environment): Datum {
         val actualArgs = Array(args.size) { args[it].eval(env).lowerSafe() }
         val actualTypes = Array(actualArgs.size) { actualArgs[it].type }
-        val candidate = match(actualTypes) ?: throw PErrors.functionTypeMismatchException(name, actualTypes, functions.toList())
+        var candidate = candidates[actualTypes]
+        if (candidate == null) {
+            candidate = match(actualTypes) ?: throw PErrors.functionTypeMismatchException(name, actualTypes, functions.toList())
+            candidates[actualTypes] = candidate
+        }
         return candidate.eval(actualArgs)
+    }
+
+    override fun close() {
+        args.forEach { it.close() }
+        candidates.clear()
     }
 
     /**

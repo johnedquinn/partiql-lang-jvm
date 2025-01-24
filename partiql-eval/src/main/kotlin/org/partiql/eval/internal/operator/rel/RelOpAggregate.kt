@@ -106,6 +106,10 @@ internal class RelOpAggregate(
 
     override fun close() {
         aggregationMap.clear()
+        groups.map { it.close() }
+        aggregates.forEach {
+            it.args.forEach { arg -> arg.close() }
+        }
         input.close()
     }
 }

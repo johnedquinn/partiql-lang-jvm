@@ -31,4 +31,8 @@ internal class ExprCall(
         }
         return function.invoke(args)
     }
+
+    override fun close() {
+        args.forEach { it.close() }
+    }
 }

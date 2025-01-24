@@ -30,5 +30,7 @@ internal class RelOpScanPermissive(
         return records.next()
     }
 
-    override fun close() {}
+    override fun close() {
+        expr.close()
+    }
 }

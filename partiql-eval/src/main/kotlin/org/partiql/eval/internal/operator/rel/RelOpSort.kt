@@ -70,6 +70,7 @@ internal class RelOpSort(
     override fun close() {
         init = false
         input.close()
+        collations.forEach { it.expr.close() }
     }
 
     /**

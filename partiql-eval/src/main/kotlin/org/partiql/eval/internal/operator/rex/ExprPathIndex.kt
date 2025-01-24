@@ -37,4 +37,9 @@ internal class ExprPathIndex(
         }
         throw PErrors.pathIndexFailureException()
     }
+
+    override fun close() {
+        root.close()
+        key.close()
+    }
 }

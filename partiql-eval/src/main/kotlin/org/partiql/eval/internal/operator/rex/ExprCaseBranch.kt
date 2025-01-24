@@ -11,7 +11,7 @@ import org.partiql.spi.value.Datum
  * @param value
  * @param result
  */
-internal class ExprCaseBranch(value: ExprValue, result: ExprValue) {
+internal class ExprCaseBranch(value: ExprValue, result: ExprValue): ExprValue {
 
     // DO NOT USE FINAL
     private var _value = value
@@ -20,7 +20,7 @@ internal class ExprCaseBranch(value: ExprValue, result: ExprValue) {
     /**
      * Evaluate the branch and compare against the match; returning the _value if the match succeeds.
      */
-    fun eval(env: Environment): Datum? {
+    override fun eval(env: Environment): Datum? {
         val v = _value.eval(env)
         if (v.type.code() == PType.BOOL && !v.isNull && !v.isMissing && v.boolean) {
             return _result.eval(env)

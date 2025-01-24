@@ -63,4 +63,9 @@ internal class ExprSubquery(input: ExprRelation, constructor: ExprValue) :
         _input.close()
         return tuple
     }
+
+    override fun close() {
+        _input.close()
+        _constructor.close()
+    }
 }

@@ -54,7 +54,7 @@ tasks.test {
     setEnvironmentDataDirectories(this)
 
     // To make it possible to run ConformanceTestReport in unit test UI runner, comment out this check:
-    exclude("org/partiql/runner/ConformanceTestEval.class")
+    // exclude("org/partiql/runner/ConformanceTestEval.class")
 
     // May 2023: Disabled conformance testing during regular project build, because fail lists are out of date.
     exclude("org/partiql/runner/ConformanceTest.class")

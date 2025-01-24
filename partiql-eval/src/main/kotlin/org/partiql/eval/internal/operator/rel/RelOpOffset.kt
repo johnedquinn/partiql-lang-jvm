@@ -45,5 +45,6 @@ internal class RelOpOffset(
 
     override fun close() {
         input.close()
+        offset.close()
     }
 }

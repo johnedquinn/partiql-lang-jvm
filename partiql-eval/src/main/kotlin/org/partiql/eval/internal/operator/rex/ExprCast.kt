@@ -24,4 +24,8 @@ internal class ExprCast(operand: ExprValue, target: PType) :
     override fun eval(env: Environment): Datum {
         return CastTable.cast(_operand.eval(env), _target)
     }
+
+    override fun close() {
+        _operand.close()
+    }
 }

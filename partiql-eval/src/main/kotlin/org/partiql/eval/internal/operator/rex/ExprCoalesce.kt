@@ -17,4 +17,8 @@ internal class ExprCoalesce(
         }
         return Datum.nullValue()
     }
+
+    override fun close() {
+        args.forEach { it.close() }
+    }
 }

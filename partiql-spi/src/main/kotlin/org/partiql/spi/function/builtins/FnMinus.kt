@@ -11,6 +11,7 @@ import org.partiql.spi.internal.byteOverflows
 import org.partiql.spi.internal.shortOverflows
 import org.partiql.spi.types.PType
 import org.partiql.spi.value.Datum
+import java.math.BigDecimal
 
 internal object FnMinus : DiadicArithmeticOperator("minus") {
 
@@ -78,12 +79,9 @@ internal object FnMinus : DiadicArithmeticOperator("minus") {
             parameters = arrayOf(
                 Parameter("lhs", numericLhs),
                 Parameter("rhs", numericRhs),
-            )
-        ) { args ->
-            val arg0 = args[0].bigDecimal
-            val arg1 = args[1].bigDecimal
-            Datum.numeric(arg0 - arg1, p, s)
-        }
+            ),
+            invoke = DecimalImpl(p, s, Datum::numeric)
+        )
     }
 
     override fun getDecimalInstance(decimalLhs: PType, decimalRhs: PType): Fn {
@@ -94,12 +92,9 @@ internal object FnMinus : DiadicArithmeticOperator("minus") {
             parameters = arrayOf(
                 Parameter("lhs", decimalLhs),
                 Parameter("rhs", decimalRhs),
-            )
-        ) { args ->
-            val arg0 = args[0].bigDecimal
-            val arg1 = args[1].bigDecimal
-            Datum.decimal(arg0 - arg1, p, s)
-        }
+            ),
+            invoke = DecimalImpl(p, s, Datum::decimal)
+        )
     }
 
     /**
@@ -129,6 +124,14 @@ internal object FnMinus : DiadicArithmeticOperator("minus") {
             val arg0 = args[0].double
             val arg1 = args[1].double
             Datum.doublePrecision((arg0 - arg1))
+        }
+    }
+
+    private class DecimalImpl(private val p: Int, private val s: Int, private val datumCreate: (BigDecimal, Int, Int) -> Datum) : java.util.function.Function<Array<Datum>, Datum> {
+        override fun apply(t: Array<Datum>): Datum {
+            val arg0 = t[0].bigDecimal
+            val arg1 = t[1].bigDecimal
+            return datumCreate.invoke(arg0 - arg1, p, s)
         }
     }
 }

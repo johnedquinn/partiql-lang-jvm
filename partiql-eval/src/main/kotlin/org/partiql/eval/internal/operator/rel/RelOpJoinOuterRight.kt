@@ -47,6 +47,7 @@ internal class RelOpJoinOuterRight(
     override fun closePeeking() {
         lhs.close()
         rhs.close()
+        condition.close()
         iterator = emptyList<Row>().iterator()
     }
 

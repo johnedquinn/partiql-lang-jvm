@@ -19,4 +19,9 @@ internal class ExprNullIf(
             else -> value
         }
     }
+
+    override fun close() {
+        valueExpr.close()
+        nullifierExpr.close()
+    }
 }

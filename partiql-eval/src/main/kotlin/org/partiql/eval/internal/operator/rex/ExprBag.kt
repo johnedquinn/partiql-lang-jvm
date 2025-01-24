@@ -14,4 +14,8 @@ internal class ExprBag(values: List<ExprValue>) :
     private var _values = values
 
     override fun eval(env: Environment): Datum = Datum.bag(_values.map { it.eval(env) })
+
+    override fun close() {
+        _values.forEach { it.close() }
+    }
 }

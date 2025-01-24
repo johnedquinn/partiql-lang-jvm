@@ -18,6 +18,8 @@ import org.partiql.spi.function.builtins.internal.AccumulatorMin
 import org.partiql.spi.function.builtins.internal.AccumulatorSum
 import org.partiql.spi.function.utils.FunctionUtils
 import org.partiql.spi.types.PType
+import org.partiql.spi.value.Datum
+import java.util.function.Function
 
 internal abstract class Fn_COLL_AGG__BAG__ANY(
     name: String,
@@ -30,10 +32,7 @@ internal abstract class Fn_COLL_AGG__BAG__ANY(
     private var returns = PType.dynamic()
 
     override fun getSignature(): RoutineOverloadSignature {
-        return RoutineOverloadSignature(
-            name,
-            parameters.map { it.type }
-        )
+        return RoutineOverloadSignature(name, parameters.map { it.type })
     }
 
     override fun getInstance(args: Array<PType>): Fn = instance
@@ -42,16 +41,23 @@ internal abstract class Fn_COLL_AGG__BAG__ANY(
         .returns(PType.dynamic())
         .addParameters(*parameters)
         .returns(returns)
-        .body { args ->
-            val bag = args[0]
+        .body(Body(isDistinct, accumulator))
+        .build()
+
+    private class Body(
+        private val isDistinct: Boolean,
+        private val accumulator: () -> Accumulator
+    ): Function<Array<Datum>, Datum> {
+        override fun apply(t: Array<Datum>): Datum {
+            val bag = t[0]
             val accumulator = when (isDistinct) {
                 true -> AccumulatorDistinct(accumulator())
                 false -> accumulator()
             }
             bag.forEach { element -> accumulator.next(arrayOf(element)) }
-            accumulator.value()
+            return accumulator.value()
         }
-        .build()
+    }
 
     object SUM_ALL : Fn_COLL_AGG__BAG__ANY("coll_sum_all", false, ::AccumulatorSum)
 

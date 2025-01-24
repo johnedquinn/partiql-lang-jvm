@@ -19,4 +19,6 @@ public interface Statement {
      */
     @NotNull
     public Datum execute() throws PRuntimeException;
+
+    public void close();
 }

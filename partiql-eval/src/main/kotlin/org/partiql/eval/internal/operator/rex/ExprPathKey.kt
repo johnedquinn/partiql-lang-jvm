@@ -21,4 +21,9 @@ internal class ExprPathKey(
         val keyString = keyEvaluated.string
         return rootEvaluated.get(keyString) ?: throw PErrors.pathKeyFailureException()
     }
+
+    override fun close() {
+        root.close()
+        key.close()
+    }
 }
