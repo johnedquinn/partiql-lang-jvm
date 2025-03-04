@@ -5,6 +5,8 @@ import lombok.EqualsAndHashCode;
 import org.jetbrains.annotations.NotNull;
 import org.partiql.ast.AstNode;
 import org.partiql.ast.AstVisitor;
+import org.partiql.ast.WindowFunctionType;
+import org.partiql.ast.WindowReference;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,17 +18,17 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = false)
 public final class ExprWindowFunction extends Expr {
     @NotNull
-    private final AstNode type;
+    private final WindowFunctionType type;
 
     @NotNull
-    private final AstNode reference;
+    private final WindowReference reference;
 
     /**
      * TODO
      * @param type TODO
      * @param reference TODO
      */
-    public ExprWindowFunction(@NotNull AstNode type, @NotNull AstNode reference) {
+    public ExprWindowFunction(@NotNull WindowFunctionType type, @NotNull WindowReference reference) {
         this.type = type;
         this.reference = reference;
     }
@@ -50,7 +52,7 @@ public final class ExprWindowFunction extends Expr {
      * @return TODO
      */
     @NotNull
-    public AstNode getFunctionType() {
+    public WindowFunctionType getFunctionType() {
         return this.type;
     }
 
@@ -59,7 +61,7 @@ public final class ExprWindowFunction extends Expr {
      * @return TODO
      */
     @NotNull
-    public AstNode getWindowReference() {
+    public WindowReference getWindowReference() {
         return this.reference;
     }
 }

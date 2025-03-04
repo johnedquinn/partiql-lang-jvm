@@ -37,6 +37,7 @@ import org.partiql.planner.internal.ir.relOpScan
 import org.partiql.planner.internal.ir.relOpScanIndexed
 import org.partiql.planner.internal.ir.relOpSort
 import org.partiql.planner.internal.ir.relOpUnpivot
+import org.partiql.planner.internal.ir.relOpWindow
 import org.partiql.planner.internal.ir.relType
 import org.partiql.planner.internal.ir.rex
 import org.partiql.planner.internal.ir.rexOpCoalesce
@@ -223,6 +224,19 @@ internal class PlanTyper(private val env: Env, config: Context) {
             // rewrite
             val op = relOpScanIndexed(rex)
             return rel(type, op)
+        }
+
+        override fun visitRelOpWindow(node: Rel.Op.Window, ctx: Rel.Type?): Rel {
+            val input = visitRel(node.input, node.input.type)
+            val functions = node.functions.map { visitRelOpWindowWindowFunction(it, ctx) }
+            val schema = ctx!!.copyWithSchema(input.type.schema.map { it.type } + functions.map { it.returnType!! })
+            val window = relOpWindow(input, functions)
+            return rel(schema, window)
+        }
+
+        override fun visitRelOpWindowWindowFunction(node: Rel.Op.Window.WindowFunction, ctx: Rel.Type?): Rel.Op.Window.WindowFunction {
+            // TODO!
+            return node.copy(returnType = PType.bigint().toCType())
         }
 
         /**
