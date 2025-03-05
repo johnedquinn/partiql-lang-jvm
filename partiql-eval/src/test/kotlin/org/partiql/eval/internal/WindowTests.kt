@@ -28,11 +28,11 @@ class WindowTests {
                 name = "Simple SFW",
                 input = """
                     SELECT
-                        RANK() OVER ()
+                        RANK() OVER () AS _rank,
+                        ROW_NUMBER() OVER () as _row_number
                     FROM <<
-                        0,
-                        1,
-                        2
+                        'hello',
+                        'goodbye'
                     >> t
                 """.trimIndent(),
                 expected = Datum.bagVararg(

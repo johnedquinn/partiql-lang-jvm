@@ -226,7 +226,7 @@ internal class StandardCompiler(strategies: List<Strategy>) : PartiQLCompiler {
 
         override fun visitWindow(rel: RelWindow, ctx: Unit): Expr {
             val input = compile(rel.getInput(), ctx)
-            val functions = rel.windowFunctions.map { WindowBuiltIns.getImpl(it.signature) }
+            val functions = rel.windowFunctions.map { WindowBuiltIns.get(it.signature) }
             val partitionBy = emptyList<ExprValue>() // TODO!!
             val sortBy = rel.collations.map { planCollationToEval(it) }
             return RelOpWindow(input, functions, partitionBy, sortBy)

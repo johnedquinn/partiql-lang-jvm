@@ -16,5 +16,5 @@ public interface WindowFunction {
      * @return TODO
      */
     @NotNull
-    Datum processRow();
+    Datum eval(@NotNull Environment env, long orderingGroupStart, long orderingGroupEnd);
 }
