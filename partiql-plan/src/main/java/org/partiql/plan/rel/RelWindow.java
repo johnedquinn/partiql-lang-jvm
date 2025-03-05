@@ -5,6 +5,7 @@ import org.partiql.plan.Collation;
 import org.partiql.plan.Operand;
 import org.partiql.plan.OperatorVisitor;
 import org.partiql.plan.WindowFunctionNode;
+import org.partiql.plan.rex.Rex;
 import org.partiql.spi.types.PType;
 import org.partiql.spi.types.PTypeField;
 
@@ -40,7 +41,7 @@ public abstract class RelWindow extends RelBase {
             @NotNull List<String> windowFunctionBindings,
             @NotNull List<WindowFunctionNode> windowFunctions,
             @NotNull List<Collation> collations,
-            @NotNull List<Object> partitions
+            @NotNull List<Rex> partitions
     ) {
         return new Impl(input, windowFunctionBindings, windowFunctions, collations, partitions);
     }
@@ -71,7 +72,7 @@ public abstract class RelWindow extends RelBase {
      * @return TODO
      */
     @NotNull
-    public abstract List<Object> getPartitions();
+    public abstract List<Rex> getPartitions();
 
     @NotNull
     @Override
@@ -92,9 +93,9 @@ public abstract class RelWindow extends RelBase {
         private final List<Collation> collations;
         private final List<String> windowFunctionBindings;
         private final List<WindowFunctionNode> windowFunctions;
-        private final List<Object> partitions;
+        private final List<Rex> partitions;
 
-        private Impl(Rel input, List<String> windowFunctionBindings, List<WindowFunctionNode> windowFunctions, List<Collation> collations, List<Object> partitions) {
+        private Impl(Rel input, List<String> windowFunctionBindings, List<WindowFunctionNode> windowFunctions, List<Collation> collations, List<Rex> partitions) {
             this.input = input;
             this.collations = collations;
             this.windowFunctionBindings = windowFunctionBindings;
@@ -122,7 +123,7 @@ public abstract class RelWindow extends RelBase {
 
         @NotNull
         @Override
-        public List<Object> getPartitions() {
+        public List<Rex> getPartitions() {
             return partitions;
         }
 
