@@ -227,9 +227,13 @@ internal class StandardCompiler(strategies: List<Strategy>) : PartiQLCompiler {
         override fun visitWindow(rel: RelWindow, ctx: Unit): Expr {
             val input = compile(rel.getInput(), ctx)
             val functions = rel.windowFunctions.map { WindowBuiltIns.get(it.signature) }
-            val partitionBy = emptyList<ExprValue>() // TODO!!
+            val partitionBy = rel.partitions.map { compile(it, Unit) }
             val sortBy = rel.collations.map { planCollationToEval(it) }
-            return RelOpWindow(input, functions, partitionBy, sortBy)
+            val realSortBy = partitionBy.map {
+                org.partiql.eval.internal.operator.rel.Collation(it, false, false)
+            } + sortBy
+            val sorted = RelOpSort(input, realSortBy)
+            return RelOpWindow(sorted, functions, partitionBy, sortBy)
         }
 
         private fun planCollationToEval(it: Collation): org.partiql.eval.internal.operator.rel.Collation {
