@@ -19,7 +19,7 @@ internal class LeadFunction(
             return default.eval(env)
         }
 
-        // Get lagged expression
+        // Get lead expression
         val row = partition.get(index)
         val newEnv = env.push(row)
         return expr.eval(newEnv)
