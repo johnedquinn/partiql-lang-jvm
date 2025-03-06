@@ -246,13 +246,15 @@ internal class PlanTransform(private val flags: Set<PlannerFlag>) {
 
         override fun visitRelOpWindow(node: Rel.Op.Window, ctx: PType): org.partiql.plan.rel.RelWindow {
             val input = visitRel(node.input, ctx)
-            val functionBinding = node.input.type.schema.last() // TODO: When we support 
+            val functionBinding = node.input.type.schema.last() // TODO: When we support multiple functions, this needs to be updated
+            val partitions = node.partitions.map { visitRex(it, it.type) }
+            val collations = node.sorts.map { collation(it) }
             return org.partiql.plan.rel.RelWindow.create(
                 input,
                 listOf(functionBinding.name),
                 node.functions.map { visitRelOpWindowWindowFunction(it, ctx) },
-                emptyList(), // TODO: Order by
-                emptyList() // TODO: Partitions
+                collations,
+                partitions,
             )
         }
 

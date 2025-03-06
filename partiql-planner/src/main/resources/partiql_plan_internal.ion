@@ -246,6 +246,8 @@ rel::{
     window::{
       input: rel,
       functions: list::[window_function],
+      partitions: list::[rex],
+      sorts: list::['.rel.op.sort.spec'],
       _: [
         window_function::{
           name: string,

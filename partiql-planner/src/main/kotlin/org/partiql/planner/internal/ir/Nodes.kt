@@ -871,10 +871,15 @@ internal data class Rel(
         internal data class Window(
             @JvmField internal val input: Rel,
             @JvmField internal val functions: List<WindowFunction>,
+            @JvmField internal val partitions: List<Rex>,
+            @JvmField internal val sorts: List<Sort.Spec>
         ) : Op() {
             public override val children: List<PlanNode> by lazy {
                 val kids = mutableListOf<PlanNode?>()
                 kids.add(input)
+                kids.addAll(functions)
+                kids.addAll(partitions)
+                kids.addAll(sorts)
                 kids.filterNotNull()
             }
 

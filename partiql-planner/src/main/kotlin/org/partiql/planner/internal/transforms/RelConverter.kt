@@ -43,9 +43,12 @@ import org.partiql.ast.SelectStar
 import org.partiql.ast.SelectValue
 import org.partiql.ast.SetOpType
 import org.partiql.ast.SetQuantifier
+import org.partiql.ast.Sort
 import org.partiql.ast.WindowFunctionNullTreatment
 import org.partiql.ast.WindowFunctionSimpleName
 import org.partiql.ast.WindowFunctionType
+import org.partiql.ast.WindowPartition
+import org.partiql.ast.WindowReference
 import org.partiql.ast.With
 import org.partiql.ast.expr.Expr
 import org.partiql.ast.expr.ExprCall
@@ -91,6 +94,8 @@ import org.partiql.planner.internal.ir.rexOpSelect
 import org.partiql.planner.internal.ir.rexOpStruct
 import org.partiql.planner.internal.ir.rexOpStructField
 import org.partiql.planner.internal.ir.rexOpVarLocal
+import org.partiql.planner.internal.ir.rexOpVarUnresolved
+import org.partiql.planner.internal.transforms.RelConverter.toRex
 import org.partiql.planner.internal.typer.CompilerType
 import org.partiql.planner.internal.typer.PlanTyper.Companion.toCType
 import org.partiql.planner.internal.util.BinderUtils.toBinder
@@ -515,14 +520,44 @@ internal object RelConverter {
             // Convert nodes to plan nodes, fold to each be their own windows (currently), and return!
             // Schema = (input bindings... functions...)
             val props = emptySet<Rel.Prop>()
-            val rel = windowFunctions.foldRight(input) { f, current ->
-                val functionNode = convertWindowFunction(f.second)
-                val newSchema = current.type.schema + listOf(relBinding(f.first, PType.dynamic().toCType()))
+            val rel = windowFunctions.foldRight(input) { (bindingName, function), current ->
+                val window = when (val ref = function.windowReference) {
+                    is WindowReference.InLineSpecification -> ref
+                    is WindowReference.Name -> error("Referencing window specifications by name is currently not supported") // TODO
+                    else -> error("Window Reference ${ref.javaClass.simpleName} not supported.") // TODO
+                }
+                val orderBy = window.specification.orderClause?.sorts?.map { convertSort(it) } ?: emptyList()
+                val partitions = window.specification.partitionClause?.partitions?.map {
+                    if (it !is WindowPartition.Name) {
+                        error("Window Partition ${it.javaClass.simpleName} not supported.")
+                    }
+                    val op = rexOpVarUnresolved(AstToPlan.convert(it.name), Rex.Op.Var.Scope.LOCAL)
+                    rex(PType.dynamic().toCType(), op)
+                } ?: emptyList()
+                val functionNode = convertWindowFunction(function)
+                val newSchema = current.type.schema + listOf(relBinding(bindingName, PType.dynamic().toCType())) // TODO: Dynamic?
                 val type = relType(newSchema, props)
-                val op = relOpWindow(current, listOf(functionNode))
+                val op = relOpWindow(current, listOf(functionNode), partitions, orderBy)
                 rel(type, op)
             }
             return Pair(sel, rel)
+        }
+
+        private fun convertSort(it: Sort): Rel.Op.Sort.Spec {
+            val rex = it.expr.toRex(env)
+            val order = when (it.order?.code()) {
+                Order.DESC -> when (it.nulls?.code()) {
+                    Nulls.LAST -> Rel.Op.Sort.Order.DESC_NULLS_LAST
+                    Nulls.FIRST, null -> Rel.Op.Sort.Order.DESC_NULLS_FIRST
+                    else -> error("Unexpected Nulls type: ${it.nulls}")
+                }
+                else -> when (it.nulls?.code()) {
+                    Nulls.FIRST -> Rel.Op.Sort.Order.ASC_NULLS_FIRST
+                    Nulls.LAST, null -> Rel.Op.Sort.Order.ASC_NULLS_LAST
+                    else -> error("Unexpected Nulls type: ${it.nulls}")
+                }
+            }
+            return relOpSortSpec(rex, order)
         }
 
         private fun convertWindowFunction(node: ExprWindowFunction): Rel.Op.Window.WindowFunction {
