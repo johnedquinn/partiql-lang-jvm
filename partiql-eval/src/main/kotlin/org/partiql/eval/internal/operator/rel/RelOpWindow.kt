@@ -7,7 +7,6 @@ import org.partiql.eval.Row
 import org.partiql.eval.WindowFunction
 import org.partiql.eval.WindowPartition
 import org.partiql.eval.internal.helpers.DatumArrayComparator
-import org.partiql.spi.value.Datum
 
 /**
  * Assume input has been sorted.
@@ -19,19 +18,36 @@ internal class RelOpWindow(
     private val sortBy: List<Collation>
 ) : RelOpPeeking() {
 
+    private companion object {
+        private val comparator = DatumArrayComparator
+    }
+
     private lateinit var _env: Environment
-    private val comparator = DatumArrayComparator
-    private lateinit var _currentPartition: Array<Datum>
-    private var _partitionPeekingNumber: Long = 0
+
+    /**
+     * This is used to track the current partition that we are iterating through.
+     */
     private var _partition: LocalPartition = LocalPartition()
+
+    /**
+     * This is used to track where we are in the partition that we are currently iterating through.
+     * @see peek
+     */
+    private var _partitionPeekingNumber: Long = 0
+
+    /**
+     * When lazily creating the partition, we need to step out-of-bounds from the current partition to know
+     * whether we are in a new partition. So, we need to put the out-of-bounds row into a place to be used
+     * when creating the next partition.
+     */
     private var leftoverRow: Row? = null
 
     override fun openPeeking(env: Environment) {
         input.open(env)
         this._env = env
-        _currentPartition = emptyArray()
         _partitionPeekingNumber = -1L
-        functions.map { it.reset(object : WindowPartition {}) }
+        _partition = LocalPartition()
+        functions.map { it.reset(_partition) }
     }
 
     override fun peek(): Row? {
@@ -44,7 +60,6 @@ internal class RelOpWindow(
 
         // Create new partition's first row
         var partitionCreationIndex = 0L
-        val newPartition = mutableListOf<Row>()
         val newLocalPartition = LocalPartition()
         val firstRow = when {
             leftoverRow != null -> {
@@ -57,7 +72,6 @@ internal class RelOpWindow(
                 false -> return null
             }
         }
-        newPartition.add(firstRow)
         val infoIndex = newLocalPartition.add(OrderingInfo(partitionCreationIndex))
         newLocalPartition.add(firstRow, infoIndex)
         val newEnv = _env.push(firstRow)
@@ -77,7 +91,6 @@ internal class RelOpWindow(
                 leftoverRow = nextRow
                 break
             } else {
-                newPartition.add(nextRow)
                 newLocalPartition.add(nextRow, infoIndex)
             }
 
@@ -91,10 +104,11 @@ internal class RelOpWindow(
             }
         }
         _partition = newLocalPartition
+        functions.map { it.reset(_partition) }
         return produceResult()
     }
 
-    private class LocalPartition {
+    private class LocalPartition : WindowPartition {
         private val rows: MutableList<Row> = mutableListOf()
         private val orderingInfo: MutableList<OrderingInfo> = mutableListOf()
         private val orderingMap = mutableListOf<Int>()
@@ -106,8 +120,8 @@ internal class RelOpWindow(
             return toReturn
         }
 
-        operator fun get(index: Int): Row {
-            return rows[index]
+        override operator fun get(index: Long): Row {
+            return rows[index.toInt()]
         }
 
         fun add(info: OrderingInfo): Int {
@@ -120,8 +134,8 @@ internal class RelOpWindow(
             return orderingInfo[orderingMap[index]]
         }
 
-        fun size(): Int {
-            return rows.size
+        override fun size(): Long {
+            return rows.size.toLong()
         }
     }
 
@@ -136,7 +150,7 @@ internal class RelOpWindow(
      * This produces a result using the existing partition.
      */
     private fun produceResult(): Row {
-        val row = _partition[_partitionPeekingNumber.toInt()]
+        val row = _partition[_partitionPeekingNumber]
         val info = _partition.getInfo(_partitionPeekingNumber.toInt())
         val newEnv = _env.push(row)
         val functions = functions.map { it.eval(newEnv, info.orderingStart, info.orderingEnd) }

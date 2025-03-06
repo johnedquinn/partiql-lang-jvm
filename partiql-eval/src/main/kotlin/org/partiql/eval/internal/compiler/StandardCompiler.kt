@@ -226,7 +226,10 @@ internal class StandardCompiler(strategies: List<Strategy>) : PartiQLCompiler {
 
         override fun visitWindow(rel: RelWindow, ctx: Unit): Expr {
             val input = compile(rel.getInput(), ctx)
-            val functions = rel.windowFunctions.map { WindowBuiltIns.get(it.signature) }
+            val functions = rel.windowFunctions.map {
+                val args = it.arguments.map { arg -> compile(arg, Unit) }
+                WindowBuiltIns.get(it.signature, args)
+            }
             val partitionBy = rel.partitions.map { compile(it, Unit) }
             val sortBy = rel.collations.map { planCollationToEval(it) }
             val realSortBy = partitionBy.map {

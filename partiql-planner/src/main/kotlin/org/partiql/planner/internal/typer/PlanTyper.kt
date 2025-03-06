@@ -235,8 +235,8 @@ internal class PlanTyper(private val env: Env, config: Context) {
         }
 
         override fun visitRelOpWindowWindowFunction(node: Rel.Op.Window.WindowFunction, ctx: Rel.Type?): Rel.Op.Window.WindowFunction {
-            // TODO!
-            return node.copy(returnType = PType.bigint().toCType())
+            val args = node.args.map { it.type(ctx!!.schema, outer) } // TODO: Check this
+            return node.copy(returnType = PType.bigint().toCType(), args = args)
         }
 
         /**

@@ -1006,7 +1006,7 @@ rankFunctionType
  * <default expression> ::= <value expression>
  */
 leadOrLagFunction
-    : name=(LEAD|LAG) PAREN_LEFT extent=expr (COMMA offset=LITERAL_INTEGER (COMMA default=expr)? )? windowFunctionNullTreatment?
+    : name=(LEAD|LAG) PAREN_LEFT extent=expr (COMMA offset=LITERAL_INTEGER (COMMA default=expr)? )? PAREN_RIGHT windowFunctionNullTreatment?
     ;
 
 /**

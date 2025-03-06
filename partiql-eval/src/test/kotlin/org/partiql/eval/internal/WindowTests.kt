@@ -29,7 +29,9 @@ class WindowTests {
                 input = """
                     SELECT
                         RANK() OVER () AS _rank,
-                        ROW_NUMBER() OVER () as _row_number
+                        ROW_NUMBER() OVER () as _row_number,
+                        LAG(t, 1, 1) OVER () AS _lag,
+                        LEAD(t, 1, 1) OVER () AS _lead
                     FROM <<
                         'hello',
                         'goodbye'
