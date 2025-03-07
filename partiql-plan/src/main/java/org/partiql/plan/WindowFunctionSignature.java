@@ -6,7 +6,7 @@ import org.partiql.spi.types.PType;
 import java.util.List;
 
 /**
- * TODO
+ * TODO: Make this a class.
  */
 public interface WindowFunctionSignature {
 

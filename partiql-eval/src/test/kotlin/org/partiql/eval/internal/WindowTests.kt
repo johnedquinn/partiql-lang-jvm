@@ -125,7 +125,7 @@ class WindowTests {
                 ),
             ),
             SuccessTestCase(
-                name = "Simplest window with all functions",
+                name = "Lag and lead referencing sometimes missing attr (partner)",
                 mode = Mode.PERMISSIVE(),
                 globals = globals,
                 input = """
@@ -184,28 +184,35 @@ class WindowTests {
          * @param lead The index of the employee's partner from the next row within their department
          */
         private fun rowOfPartner(id: Int, rank: Long, denseRank: Long, rowNumber: Long, lag: String?, lead: String?): Datum {
-            return Datum.struct(
+            val fields = listOfNotNull(
                 Field.of("_id", Datum.integer(id)),
                 Field.of("_name", Datum.string(employees[id].name)),
                 Field.of("_rank", Datum.bigint(rank)),
                 Field.of("_dense_rank", Datum.bigint(denseRank)),
                 Field.of("_row_number", Datum.bigint(rowNumber)),
-                Field.of("_lag", lag?.let { Datum.string(it) } ?: Datum.missing()),
-                Field.of("_lead", lead?.let { Datum.string(it) } ?: Datum.missing()),
+                lag?.let { Field.of("_lag", Datum.string(it)) },
+                lead?.let { Field.of("_lead", Datum.string(it)) },
             )
+            return Datum.struct(fields)
         }
 
         @JvmStatic
         fun failureTestCases() = listOf(
             FailureTestCase(
-                name = "CTE with cardinality greater than 1 used in subquery",
+                name = "Lag and lead referencing sometimes missing attr (partner)",
+                mode = Mode.STRICT(),
                 input = """
-                    WITH x AS (
-                        SELECT VALUE t FROM <<1, 2>> AS t
-                    )
-                    SELECT VALUE y + (SELECT * FROM x) FROM <<100>> AS y;
-                """.trimIndent(),
-            ),
+                    SELECT
+                        t.id AS _id,
+                        t.name AS _name,
+                        RANK() OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _rank,
+                        DENSE_RANK() OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _dense_rank,
+                        ROW_NUMBER() OVER (PARTITION BY t.department ORDER BY t.age, t.name) as _row_number,
+                        LAG(t.partner, 1, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _lag,
+                        LEAD(t.partner, 1, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _lead
+                    FROM employee AS t;
+                """.trimIndent()
+            )
         )
     }
 }

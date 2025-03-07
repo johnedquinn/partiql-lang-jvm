@@ -275,7 +275,6 @@ internal class PlanTransform(private val flags: Set<PlannerFlag>) {
                 override fun isIgnoreNulls(): Boolean {
                     return node.isIgnoreNulls
                 }
-
             }
             val args = node.args.map { visitRex(it, it.type) }
             return object : WindowFunctionNode {
