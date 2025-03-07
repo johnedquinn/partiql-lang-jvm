@@ -67,26 +67,33 @@ class WindowTests {
                     SELECT
                         t.id AS _id,
                         t.name AS _name,
-                        RANK() OVER (PARTITION BY t.department ORDER BY t.id) AS _rank,
-                        DENSE_RANK() OVER (PARTITION BY t.department ORDER BY t.id) AS _dense_rank,
-                        ROW_NUMBER() OVER (PARTITION BY t.department ORDER BY t.id) as _row_number,
-                        LAG(t.name, 1, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.id) AS _lag,
-                        LEAD(t.name, 1, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.id) AS _lead
-                    FROM employee AS t
-                    LIMIT 2;
+                        RANK() OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _rank,
+                        DENSE_RANK() OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _dense_rank,
+                        ROW_NUMBER() OVER (PARTITION BY t.department ORDER BY t.age, t.name) as _row_number,
+                        LAG(t.name, 1, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _lag,
+                        LEAD(t.name, 1, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _lead
+                    FROM employee AS t;
                 """.trimIndent(),
                 expected = Datum.bagVararg(
-                    rowOf(employees[0].id, employees[0].name, 1, 1, 1, FALLBACK, employees[6].name),
-                    rowOf(employees[6].id, employees[6].name, 2, 2, 2, employees[0].name, FALLBACK),
+                    rowOf(6, 1, 1, 1, FALLBACK, employees[0].name),
+                    rowOf(0, 2, 2, 2, employees[6].name, FALLBACK),
+                    rowOf(5, 1, 1, 1, FALLBACK, employees[3].name),
+                    rowOf(3, 2, 2, 2, employees[5].name, employees[9].name),
+                    rowOf(9, 2, 2, 3, employees[3].name, employees[7].name),
+                    rowOf(7, 4, 3, 4, employees[9].name, employees[2].name),
+                    rowOf(2, 5, 4, 5, employees[7].name, FALLBACK),
+                    rowOf(1, 1, 1, 1, FALLBACK, employees[4].name),
+                    rowOf(4, 1, 1, 2, employees[1].name, employees[8].name),
+                    rowOf(8, 3, 2, 3, employees[4].name, FALLBACK),
                 ),
                 globals = globals
             ),
         )
 
-        private fun rowOf(id: Int, name: String, rank: Long, denseRank: Long, rowNumber: Long, lag: String, lead: String): Datum {
+        private fun rowOf(id: Int, rank: Long, denseRank: Long, rowNumber: Long, lag: String, lead: String): Datum {
             return Datum.struct(
                 Field.of("_id", Datum.integer(id)),
-                Field.of("_name", Datum.string(name)),
+                Field.of("_name", Datum.string(employees[id].name)),
                 Field.of("_rank", Datum.bigint(rank)),
                 Field.of("_dense_rank", Datum.bigint(denseRank)),
                 Field.of("_row_number", Datum.bigint(rowNumber)),
