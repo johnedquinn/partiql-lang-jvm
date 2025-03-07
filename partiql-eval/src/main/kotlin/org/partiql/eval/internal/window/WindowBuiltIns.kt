@@ -9,7 +9,7 @@ internal object WindowBuiltIns {
         return when (signature.name) {
             "row_number" -> RowNumberFunction()
             "rank" -> RankFunction()
-            "dense_rank" -> TODO()
+            "dense_rank" -> DenseRankFunction()
             "percent_rank" -> TODO()
             "cume_dist" -> TODO()
             "ntile" -> TODO()
