@@ -578,7 +578,11 @@ internal object RelConverter {
                         true -> "lag"
                         false -> "lead"
                     }
-                    val isIgnoreNulls = (windowType.nullTreatment?.code() == WindowFunctionNullTreatment.IGNORE_NULLS) // TODO: Check default when not specified
+                    val isIgnoreNulls = when (windowType.nullTreatment?.code()) {
+                        WindowFunctionNullTreatment.RESPECT_NULLS, null -> false
+                        WindowFunctionNullTreatment.IGNORE_NULLS -> true
+                        else -> error("Unexpected WindowFunctionNullTreatment type: ${windowType.nullTreatment}")
+                    }
                     val extent = windowType.extent.toRex(env)
                     val offset = windowType.offset?.let { rex(CompilerType(PType.bigint()), rexOpLit(Datum.bigint(it))) }
                     val default = windowType.defaultValue?.toRex(env)

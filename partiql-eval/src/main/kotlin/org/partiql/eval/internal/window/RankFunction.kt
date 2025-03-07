@@ -8,7 +8,7 @@ import org.partiql.spi.value.Datum
 internal class RankFunction : WindowFunction {
 
     private var _rank: Long = 0
-    private var _currentOrderingGroupStart: Long = 0
+    private var _currentOrderingGroupStart: Long = -1
     private var _currentOrderingGroupCount: Long = 0
 
     override fun reset(partition: WindowPartition) {

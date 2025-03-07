@@ -72,8 +72,8 @@ internal class RelOpWindow(
                 false -> return null
             }
         }
-        val infoIndex = newLocalPartition.add(OrderingInfo(partitionCreationIndex))
-        newLocalPartition.add(firstRow, infoIndex)
+        var previousInfoIndex = newLocalPartition.add(OrderingInfo(partitionCreationIndex))
+        newLocalPartition.add(firstRow, previousInfoIndex)
         val newEnv = _env.push(firstRow)
         val firstRowPartitionKeys = Array(partitionBy.size) { partitionBy[it].eval(newEnv) }
         var previousRowSortKeys = Array(partitionBy.size) { sortBy[it].expr.eval(newEnv) }
@@ -82,26 +82,27 @@ internal class RelOpWindow(
         while (input.hasNext()) {
             partitionCreationIndex++
             val nextRow = input.next()
-            val nextEnv = _env.push(firstRow)
+            val nextEnv = _env.push(nextRow)
 
-            // Stop if at next partition
+            // Stop (and save spillover row) if at next partition
             val nextPartitionKeys = Array(partitionBy.size) { partitionBy[it].eval(nextEnv) }
             val isNewPartition = comparator.compare(firstRowPartitionKeys, nextPartitionKeys) != 0
             if (isNewPartition) {
                 leftoverRow = nextRow
                 break
-            } else {
-                newLocalPartition.add(nextRow, infoIndex)
             }
 
-            // Update ordering info (if necessary)
+            // Add next row to partition and update ordering info (if we have reached the next sort group)
             val nextSortKeys = Array(partitionBy.size) { sortBy[it].expr.eval(nextEnv) }
             val isNewSortGroup = comparator.compare(previousRowSortKeys, nextSortKeys) != 0
             if (isNewSortGroup) {
-                val info = newLocalPartition.getInfo(infoIndex)
-                info.orderingEnd = partitionCreationIndex - 1 // TODO: Check this
+                val info = newLocalPartition.getInfo(previousInfoIndex)
+                info.orderingEnd = partitionCreationIndex - 1
                 previousRowSortKeys = nextSortKeys
+                val nextInfo = OrderingInfo(partitionCreationIndex)
+                previousInfoIndex = newLocalPartition.add(nextInfo)
             }
+            newLocalPartition.add(nextRow, previousInfoIndex)
         }
         _partition = newLocalPartition
         functions.map { it.reset(_partition) }
