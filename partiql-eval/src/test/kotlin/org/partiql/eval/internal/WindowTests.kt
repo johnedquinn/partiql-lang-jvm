@@ -61,8 +61,9 @@ class WindowTests {
         @JvmStatic
         fun successTestCases() = listOf(
             SuccessTestCase(
-                name = "Simple SFW",
-                mode = Mode.PERMISSIVE(),
+                name = "Simplest window with all functions",
+                mode = Mode.STRICT(),
+                globals = globals,
                 input = """
                     SELECT
                         t.id AS _id,
@@ -75,30 +76,66 @@ class WindowTests {
                     FROM employee AS t;
                 """.trimIndent(),
                 expected = Datum.bagVararg(
-                    rowOf(6, 1, 1, 1, FALLBACK, employees[0].name),
-                    rowOf(0, 2, 2, 2, employees[6].name, FALLBACK),
-                    rowOf(5, 1, 1, 1, FALLBACK, employees[3].name),
-                    rowOf(3, 2, 2, 2, employees[5].name, employees[9].name),
-                    rowOf(9, 2, 2, 3, employees[3].name, employees[7].name),
-                    rowOf(7, 4, 3, 4, employees[9].name, employees[2].name),
-                    rowOf(2, 5, 4, 5, employees[7].name, FALLBACK),
-                    rowOf(1, 1, 1, 1, FALLBACK, employees[4].name),
-                    rowOf(4, 1, 1, 2, employees[1].name, employees[8].name),
-                    rowOf(8, 3, 2, 3, employees[4].name, FALLBACK),
+                    rowOf(6, 1, 1, 1, null, 0),
+                    rowOf(0, 2, 2, 2, 6, null),
+                    rowOf(5, 1, 1, 1, null, 3),
+                    rowOf(3, 2, 2, 2, 5, 9),
+                    rowOf(9, 2, 2, 3, 3, 7),
+                    rowOf(7, 4, 3, 4, 9, 2),
+                    rowOf(2, 5, 4, 5, 7, null),
+                    rowOf(1, 1, 1, 1, null, 4),
+                    rowOf(4, 1, 1, 2, 1, 8),
+                    rowOf(8, 3, 2, 3, 4, null),
                 ),
-                globals = globals
             ),
+            SuccessTestCase(
+                name = "Lead/Lag with more than 1",
+                mode = Mode.STRICT(),
+                globals = globals,
+                input = """
+                    SELECT
+                        t.id AS _id,
+                        t.name AS _name,
+                        RANK() OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _rank,
+                        DENSE_RANK() OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _dense_rank,
+                        ROW_NUMBER() OVER (PARTITION BY t.department ORDER BY t.age, t.name) as _row_number,
+                        LAG(t.name, 3, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _lag,
+                        LEAD(t.name, 3, '$FALLBACK') OVER (PARTITION BY t.department ORDER BY t.age, t.name) AS _lead
+                    FROM employee AS t;
+                """.trimIndent(),
+                expected = Datum.bagVararg(
+                    rowOf(6, 1, 1, 1, null, null),
+                    rowOf(0, 2, 2, 2, null, null),
+                    rowOf(5, 1, 1, 1, null, 7),
+                    rowOf(3, 2, 2, 2, null, 2),
+                    rowOf(9, 2, 2, 3, null, null),
+                    rowOf(7, 4, 3, 4, 5, null),
+                    rowOf(2, 5, 4, 5, 3, null),
+                    rowOf(1, 1, 1, 1, null, null),
+                    rowOf(4, 1, 1, 2, null, null),
+                    rowOf(8, 3, 2, 3, null, null),
+                ),
+            ),
+            // TODO: Test where expr of lag/lead may result in MISSING in permissive mode
         )
 
-        private fun rowOf(id: Int, rank: Long, denseRank: Long, rowNumber: Long, lag: String, lead: String): Datum {
+        /**
+         * @param id The employee's id
+         * @param rank The employee's rank within their department
+         * @param denseRank The employee's dense rank within their department
+         * @param rowNumber The employee's row number within their department
+         * @param lag The index of the employee's name from the previous row within their department
+         * @param lead The index of the employee's name from the next row within their department
+         */
+        private fun rowOf(id: Int, rank: Long, denseRank: Long, rowNumber: Long, lag: Int?, lead: Int?): Datum {
             return Datum.struct(
                 Field.of("_id", Datum.integer(id)),
                 Field.of("_name", Datum.string(employees[id].name)),
                 Field.of("_rank", Datum.bigint(rank)),
                 Field.of("_dense_rank", Datum.bigint(denseRank)),
                 Field.of("_row_number", Datum.bigint(rowNumber)),
-                Field.of("_lag", Datum.string(lag)),
-                Field.of("_lead", Datum.string(lead))
+                Field.of("_lag", Datum.string(lag?.let { employees[it].name } ?: FALLBACK)),
+                Field.of("_lead", Datum.string(lead?.let { employees[it].name } ?: FALLBACK))
             )
         }
 
